@@ -318,7 +318,7 @@ meta_plugin_manager_xevent_filter (MetaPluginManager *plugin_mgr,
    * event directly to Clutter ourselves.
    */
    if (klass->xevent_filter && klass->xevent_filter (plugin, xev))
-    retrun TRUE;
+    return TRUE;
    else
     return clutter_x11_handle_event (xev) != CLUTTER_X11_FILTER_CONTINUE;
 }
