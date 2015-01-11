@@ -384,7 +384,7 @@ on_sigterm (void)
  * meta_init: (skip)
  *
  * Initialize muffin. Call this after meta_get_option_context() and
- * meta_plugin_type_register(), and before meta_run().
+ * meta_plugin_manager_set_plugin_type(), and before meta_run().
  */
 void
 meta_init (void)
