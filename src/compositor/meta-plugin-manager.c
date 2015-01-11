@@ -205,8 +205,7 @@ meta_plugin_manager_kill_window_effects (MetaPluginManager *plugin_mgr,
       MetaPlugin        *plugin = l->data;
       MetaPluginClass   *klass = META_PLUGIN_GET_CLASS (plugin);
 
-      if (!meta_plugin_disabled (plugin)
-	  && klass->kill_window_effects)
+      if (klass->kill_window_effects)
         klass->kill_window_effects (plugin, actor);
 
       l = l->next;
@@ -223,7 +222,7 @@ meta_plugin_manager_kill_switch_workspace (MetaPluginManager *plugin_mgr)
       MetaPlugin        *plugin = l->data;
       MetaPluginClass   *klass = META_PLUGIN_GET_CLASS (plugin);
 
-      if (!meta_plugin_disabled (plugin) && klass->kill_switch_workspace)
+      if (klass->kill_switch_workspace)
         klass->kill_switch_workspace (plugin);
 
       l = l->next;
@@ -256,10 +255,8 @@ meta_plugin_manager_event_simple (MetaPluginManager *plugin_mgr,
       MetaPlugin        *plugin = l->data;
       MetaPluginClass   *klass = META_PLUGIN_GET_CLASS (plugin);
 
-      if (!meta_plugin_disabled (plugin))
+      switch (event)
       {
-          switch (event)
-          {
             case META_PLUGIN_MINIMIZE:
               if (klass->minimize)
               {
@@ -294,8 +291,7 @@ meta_plugin_manager_event_simple (MetaPluginManager *plugin_mgr,
               break;
             default:
               g_warning ("Incorrect handler called for event %lu", event);
-          }
-        }
+      }
 
       l = l->next;
   }
@@ -333,10 +329,8 @@ meta_plugin_manager_event_maximize (MetaPluginManager *plugin_mgr,
       MetaPlugin        *plugin = l->data;
       MetaPluginClass   *klass = META_PLUGIN_GET_CLASS (plugin);
 
-      if (!meta_plugin_disabled (plugin))
+      switch (event)
       {
-          switch (event)
-          {
             case META_PLUGIN_MAXIMIZE:
               if (klass->maximize)
                 {
@@ -379,8 +373,7 @@ meta_plugin_manager_event_maximize (MetaPluginManager *plugin_mgr,
               break;
             default:
               g_warning ("Incorrect handler called for event %lu", event);
-            }
-        }
+      }
 
       l = l->next;
     }
@@ -414,7 +407,7 @@ meta_plugin_manager_switch_workspace (MetaPluginManager   *plugin_mgr,
       MetaPlugin        *plugin = l->data;
       MetaPluginClass   *klass = META_PLUGIN_GET_CLASS (plugin);
 
-      if (!meta_plugin_disabled (plugin) && klass->switch_workspace)
+      if (klass->switch_workspace)
       {
            retval = TRUE;
            meta_plugin_manager_kill_switch_workspace (plugin_mgr);
