@@ -393,8 +393,6 @@ meta_init (void)
   sigset_t empty_mask;
   GIOChannel *channel;
 
-  g_type_init ();
-  
   sigemptyset (&empty_mask);
   act.sa_handler = SIG_IGN;
   act.sa_mask    = empty_mask;
