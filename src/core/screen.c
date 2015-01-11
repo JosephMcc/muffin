@@ -96,6 +96,8 @@ enum
   MONITORS_CHANGED,
   SNAP_OSD_SHOW,
   SNAP_OSD_HIDE,
+  TILE_PREVIEW_SHOW,
+  TILE_PREVIEW_HIDE,
   WORKSPACE_OSD_SHOW,
 
   LAST_SIGNAL
@@ -276,6 +278,23 @@ meta_screen_class_init (MetaScreenClass *klass)
                   0,
                   NULL, NULL, NULL,
                   G_TYPE_NONE, 0);
+
+    screen_signals[TILE_PREVIEW_SHOW] =
+        g_signal_new ("show-tile-preview",
+                      G_TYPE_FROM_CLASS (klass),
+                      G_SIGNAL_RUN_LAST,
+                      0,
+                      NULL, NULL, NULL,
+                      G_TYPE_NONE, 1,
+                      META_TYPE_RECTANGLE);
+
+    screen_signals[TILE_PREVIEW_HIDE] = 
+        g_signal_new ("hide-tile-preview",
+                      G_TYPE_FROM_CLASS (klass),
+                      G_SIGNAL_RUN_LAST,
+                      0,
+                      NULL, NULL, NULL,
+                      G_TYPE_NONE, 0);
 
   screen_signals[WORKSPACE_OSD_SHOW] =
     g_signal_new ("show-workspace-osd",
@@ -2072,14 +2091,16 @@ meta_screen_tile_preview_update_timeout (gpointer data)
       MetaRectangle tile_rect;
 
       meta_window_get_current_tile_area (window, &tile_rect);
-      meta_tile_preview_show (screen->tile_preview, &tile_rect, window->snap_queued);
+      // meta_tile_preview_show (screen->tile_preview, &tile_rect, window->snap_queued);
+      g_signal_emit (screen, screen_signals[TILE_PREVIEW_SHOW], 0, &tile_rect);
       if (screen->snap_osd_timeout_id == 0)
         screen->snap_osd_timeout_id = g_timeout_add_seconds (SNAP_OSD_TIMEOUT,
                                                              snap_osd_timeout,
                                                              screen);
     }
   else
-    meta_tile_preview_hide (screen->tile_preview);
+    // meta_tile_preview_hide (screen->tile_preview);
+    g_signal_emit (screen, screen_signals[TILE_PREVIEW_HIDE], 0);
 
   return FALSE;
 }
@@ -2119,9 +2140,10 @@ meta_screen_tile_preview_hide (MetaScreen *screen)
     screen->tile_preview_timeout_id = 0;
   }
 
-  if (screen->tile_preview)
-    meta_tile_preview_hide (screen->tile_preview);
-
+  if (screen->tile_preview) {
+    // meta_tile_preview_hide (screen->tile_preview);
+    g_signal_emit (screen, screen_signals[TILE_PREVIEW_HIDE], 0);
+  }
   g_timeout_add (250, maybe_hide_snap_osd, screen);
 }
 
