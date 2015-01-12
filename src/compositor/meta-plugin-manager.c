@@ -322,3 +322,44 @@ meta_plugin_manager_xevent_filter (MetaPluginManager *plugin_mgr,
    else
     return clutter_x11_handle_event (xev) != CLUTTER_X11_FILTER_CONTINUE;
 }
+
+gboolean
+meta_plugin_manager_show_tile_preview (MetaPluginManager *plugin_mgr,
+                                       MetaWindow        *window,
+                                       MetaRectangle     *tile_rect,
+                                       int               tile_monitor_number)
+{
+    MetaPlugin *plugin = plugin_mgr->plugin;
+    MetaPluginClass *klass = META_PLUGIN_GET_CLASS (plugin);
+    MetaDisplay *display = meta_screen_get_display (plugin_mgr->screen);
+
+    if (display->display_opening)
+        return FALSE;
+
+    if (klass->show_tile_preview)
+    {
+        klass->show_tile_preview (plugin, window, tile_rect, tile_monitor_number);
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+gboolean
+meta_plugin_manager_hide_tile_preview (MetaPluginManager *plugin_mgr)
+{
+    MetaPlugin *plugin = plugin_mgr->plugin;
+    MetaPluginClass *klass = META_PLUGIN_GET_CLASS (plugin);
+    MetaDisplay *display = meta_screen_get_display (plugin_mgr->screen);
+
+    if (display->display_opening)
+        return FALSE;
+
+    if (klass->hide_tile_preview)
+    {
+        klass->hide_tile_preview (plugin);
+        return TRUE;
+    }
+
+    return FALSE;
+}

@@ -75,4 +75,11 @@ gboolean meta_plugin_manager_switch_workspace (MetaPluginManager   *mgr,
 gboolean meta_plugin_manager_xevent_filter (MetaPluginManager *mgr,
                                             XEvent            *xev);
 
+gboolean meta_plugin_manager_show_tile_preview (MetaPluginManager *plugin_mgr,
+                                                MetaWindow        *window,
+                                                MetaRectangle     *tile_rect,
+                                                int               tile_monitor_number);
+
+gboolean meta_plugin_manager_hide_tile_preview (MetaPluginManager *plugin_mgr);
+
 #endif

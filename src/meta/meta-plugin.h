@@ -101,6 +101,13 @@ struct _MetaPluginClass
                             gint                to,
                             MetaMotionDirection direction);
 
+  void (*show_tile_preview) (MetaPlugin         *plugin,
+                             MetaWindow         *window,
+                             MetaRectangle      *tile_rect,
+                             int                tile_monitor_number);
+
+  void (*hide_tile_preview) (MetaPlugin         *plugin);
+
   /*
    * Called if an effects should be killed prematurely; the plugin must
    * call the completed() callback as if the effect terminated naturally.

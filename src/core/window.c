@@ -10186,6 +10186,20 @@ meta_window_get_tile_threshold_area_for_mode (MetaWindow    *window,
   }
 }
 
+int
+meta_window_get_current_tile_monitor_number (MetaWindow *window)
+{
+    int tile_monitor_number = window->tile_monitor_number;
+
+    if (tile_monitor_number < 0)
+    {
+        meta_warning ("%s called with an invalid monitor number, using 0 instead\n", G_STRFUNC);
+        tile_monitor_number = 0;
+    }
+
+    return tile_monitor_number;
+}
+
 LOCAL_SYMBOL void
 meta_window_get_current_tile_area (MetaWindow    *window,
                                    MetaRectangle *tile_area)
@@ -10194,12 +10208,7 @@ meta_window_get_current_tile_area (MetaWindow    *window,
 
   g_return_if_fail (window->tile_mode != META_TILE_NONE);
 
-  tile_monitor_number = window->tile_monitor_number;
-  if (tile_monitor_number < 0)
-    {
-      meta_warning ("%s called with an invalid monitor number; using 0 instead\n", G_STRFUNC);
-      tile_monitor_number = 0;
-    }
+  tile_monitor_number = meta_window_get_current_tile_monitor_number (window);
 
   meta_window_get_work_area_for_monitor (window, tile_monitor_number, tile_area);
 

@@ -703,6 +703,8 @@ void meta_window_get_work_area_for_monitor     (MetaWindow    *window,
 void meta_window_get_work_area_all_monitors    (MetaWindow    *window,
                                                 MetaRectangle *area);
 
+int meta_window_get_current_tile_monitor_number (MetaWindow *window);
+
 void meta_window_get_current_tile_area         (MetaWindow    *window,
                                                 MetaRectangle *tile_area);
 

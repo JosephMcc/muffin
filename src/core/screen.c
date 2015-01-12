@@ -957,7 +957,6 @@ meta_screen_new (MetaDisplay *display,
 
   screen->tab_popup = NULL;
   screen->ws_popup = NULL;
-  screen->tile_preview = NULL;
   screen->tile_hud = NULL;
 
   screen->tile_preview_timeout_id = 0;
@@ -1072,9 +1071,6 @@ meta_screen_free (MetaScreen *screen,
     g_source_remove (screen->tile_preview_timeout_id);
     screen->tile_preview_timeout_id = 0;
   }
-
-  if (screen->tile_preview)
-    meta_tile_preview_free (screen->tile_preview);
 
   if (screen->tile_hud_timeout_id) {
     g_source_remove (screen->tile_hud_timeout_id);
@@ -2025,18 +2021,6 @@ meta_screen_tile_preview_update_timeout (gpointer data)
 
   screen->tile_preview_timeout_id = 0;
 
-  if (!screen->tile_preview)
-    {
-      Window xwindow;
-      gulong create_serial;
-      screen->tile_preview = meta_tile_preview_new (screen->number);
-      xwindow = meta_tile_preview_get_xwindow (screen->tile_preview,
-                                               &create_serial);
-      meta_stack_tracker_record_add (screen->stack_tracker,
-                                     xwindow,
-                                     create_serial);
-    }
-
   if (window && window->mouse_on_edge)
     {
       switch (window->tile_mode)
@@ -2071,16 +2055,21 @@ meta_screen_tile_preview_update_timeout (gpointer data)
   if (needs_preview)
     {
       MetaRectangle tile_rect;
+      int monitor;
 
+      monitor = meta_window_get_current_tile_monitor_number (window);
       meta_window_get_current_tile_area (window, &tile_rect);
-      meta_tile_preview_show (screen->tile_preview, &tile_rect, window->snap_queued);
+      meta_compositor_show_tile_preview (screen->display->compositor,
+                                         screen, window, &tile_rect, monitor);
+
       if (screen->snap_osd_timeout_id == 0)
         screen->snap_osd_timeout_id = g_timeout_add_seconds (SNAP_OSD_TIMEOUT,
                                                              snap_osd_timeout,
                                                              screen);
     }
   else
-    meta_tile_preview_hide (screen->tile_preview);
+    meta_compositor_hide_tile_preview (screen->display->compositor,
+                                       screen);
 
   return FALSE;
 }
@@ -2120,8 +2109,8 @@ meta_screen_tile_preview_hide (MetaScreen *screen)
     screen->tile_preview_timeout_id = 0;
   }
 
-  if (screen->tile_preview)
-    meta_tile_preview_hide (screen->tile_preview);
+  meta_compositor_hide_tile_preview (screen->display->compositor,
+                                     screen);
 
   g_timeout_add (250, maybe_hide_snap_osd, screen);
 }

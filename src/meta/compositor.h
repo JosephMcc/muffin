@@ -171,4 +171,13 @@ void meta_compositor_tile_window       (MetaCompositor      *compositor,
                                         MetaRectangle       *old_rect,
                                         MetaRectangle       *new_rect);
 
+void meta_compositor_show_tile_preview (MetaCompositor  *compositor,
+                                        MetaScreen      *screen,
+                                        MetaWindow      *window,
+                                        MetaRectangle   *tile_rect,
+                                        int             tile_monitor_number);
+
+void meta_compositor_hide_tile_preview (MetaCompositor  *compositor,
+                                        MetaScreen      *screen);
+
 #endif /* META_COMPOSITOR_H */
