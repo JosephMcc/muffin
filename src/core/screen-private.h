@@ -84,6 +84,7 @@ struct _MetaScreen
   guint snap_osd_timeout_id;
   float hud_opacity;
   gboolean hud_hiding;
+  gboolean tile_preview_visible;
 
   MetaWorkspace *active_workspace;
 

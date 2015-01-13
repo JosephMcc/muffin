@@ -967,6 +967,7 @@ meta_screen_new (MetaDisplay *display,
 
   screen->hud_opacity = 0.0;
   screen->hud_hiding = FALSE;
+  screen->tile_preview_visible = FALSE;
 
   screen->stack = meta_stack_new (screen);
   screen->stack_tracker = meta_stack_tracker_new (screen);
@@ -2061,6 +2062,7 @@ meta_screen_tile_preview_update_timeout (gpointer data)
       meta_window_get_current_tile_area (window, &tile_rect);
       meta_compositor_show_tile_preview (screen->display->compositor,
                                          screen, window, &tile_rect, monitor);
+      screen->tile_preview_visible = TRUE;
 
       if (screen->snap_osd_timeout_id == 0)
         screen->snap_osd_timeout_id = g_timeout_add_seconds (SNAP_OSD_TIMEOUT,
@@ -2068,8 +2070,11 @@ meta_screen_tile_preview_update_timeout (gpointer data)
                                                              screen);
     }
   else
+  {
     meta_compositor_hide_tile_preview (screen->display->compositor,
                                        screen);
+    screen->tile_preview_visible = FALSE;
+  }
 
   return FALSE;
 }
@@ -2111,6 +2116,7 @@ meta_screen_tile_preview_hide (MetaScreen *screen)
 
   meta_compositor_hide_tile_preview (screen->display->compositor,
                                      screen);
+  screen->tile_preview_visible = FALSE;
 
   g_timeout_add (250, maybe_hide_snap_osd, screen);
 }
@@ -2118,10 +2124,11 @@ meta_screen_tile_preview_hide (MetaScreen *screen)
 LOCAL_SYMBOL gboolean
 meta_screen_tile_preview_get_visible (MetaScreen *screen)
 {
-    if (screen->tile_preview == NULL)
-        return FALSE;
+    return screen->tile_preview_visible;
+    // if (screen->tile_preview == NULL)
+    //     return FALSE;
 
-    return meta_tile_preview_get_visible (screen->tile_preview);
+    // return meta_tile_preview_get_visible (screen->tile_preview);
 }
 
 static gboolean
