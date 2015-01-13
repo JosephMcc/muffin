@@ -975,7 +975,7 @@ meta_screen_new (MetaDisplay *display,
 
   screen->tab_popup = NULL;
   screen->ws_popup = NULL;
-  screen->tile_preview = NULL;
+  //screen->tile_preview = NULL;
   screen->tile_hud = NULL;
 
   screen->tile_preview_timeout_id = 0;
@@ -986,6 +986,7 @@ meta_screen_new (MetaDisplay *display,
 
   screen->hud_opacity = 0.0;
   screen->hud_hiding = FALSE;
+  screen->tile_preview_visible = FALSE;
 
   screen->stack = meta_stack_new (screen);
   screen->stack_tracker = meta_stack_tracker_new (screen);
@@ -1091,8 +1092,8 @@ meta_screen_free (MetaScreen *screen,
     screen->tile_preview_timeout_id = 0;
   }
 
-  if (screen->tile_preview)
-    meta_tile_preview_free (screen->tile_preview);
+  // if (screen->tile_preview)
+  //   meta_tile_preview_free (screen->tile_preview);
 
   if (screen->tile_hud_timeout_id) {
     g_source_remove (screen->tile_hud_timeout_id);
@@ -2043,17 +2044,17 @@ meta_screen_tile_preview_update_timeout (gpointer data)
 
   screen->tile_preview_timeout_id = 0;
 
-  if (!screen->tile_preview)
-    {
-      Window xwindow;
-      gulong create_serial;
-      screen->tile_preview = meta_tile_preview_new (screen->number);
-      xwindow = meta_tile_preview_get_xwindow (screen->tile_preview,
-                                               &create_serial);
-      meta_stack_tracker_record_add (screen->stack_tracker,
-                                     xwindow,
-                                     create_serial);
-    }
+  // if (!screen->tile_preview)
+  //   {
+  //     Window xwindow;
+  //     gulong create_serial;
+  //     screen->tile_preview = meta_tile_preview_new (screen->number);
+  //     xwindow = meta_tile_preview_get_xwindow (screen->tile_preview,
+  //                                              &create_serial);
+  //     meta_stack_tracker_record_add (screen->stack_tracker,
+  //                                    xwindow,
+  //                                    create_serial);
+  //   }
 
   if (window && window->mouse_on_edge)
     {
@@ -2093,14 +2094,18 @@ meta_screen_tile_preview_update_timeout (gpointer data)
       meta_window_get_current_tile_area (window, &tile_rect);
       // meta_tile_preview_show (screen->tile_preview, &tile_rect, window->snap_queued);
       g_signal_emit (screen, screen_signals[TILE_PREVIEW_SHOW], 0, &tile_rect);
+      screen->tile_preview_visible = TRUE;
       if (screen->snap_osd_timeout_id == 0)
         screen->snap_osd_timeout_id = g_timeout_add_seconds (SNAP_OSD_TIMEOUT,
                                                              snap_osd_timeout,
                                                              screen);
     }
   else
+  {
     // meta_tile_preview_hide (screen->tile_preview);
     g_signal_emit (screen, screen_signals[TILE_PREVIEW_HIDE], 0);
+    screen->tile_preview_visible = FALSE;
+  }
 
   return FALSE;
 }
@@ -2140,7 +2145,7 @@ meta_screen_tile_preview_hide (MetaScreen *screen)
     screen->tile_preview_timeout_id = 0;
   }
 
-  if (screen->tile_preview) {
+  if (screen->tile_preview_visible) {
     // meta_tile_preview_hide (screen->tile_preview);
     g_signal_emit (screen, screen_signals[TILE_PREVIEW_HIDE], 0);
   }
@@ -2150,10 +2155,11 @@ meta_screen_tile_preview_hide (MetaScreen *screen)
 LOCAL_SYMBOL gboolean
 meta_screen_tile_preview_get_visible (MetaScreen *screen)
 {
-    if (screen->tile_preview == NULL)
-        return FALSE;
+    return screen->tile_preview_visible;
+    // if (screen->tile_preview == NULL)
+    //     return FALSE;
 
-    return meta_tile_preview_get_visible (screen->tile_preview);
+    // return meta_tile_preview_get_visible (screen->tile_preview);
 }
 
 static gboolean
