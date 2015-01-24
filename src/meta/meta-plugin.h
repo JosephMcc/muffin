@@ -104,9 +104,17 @@ struct _MetaPluginClass
   void (*show_tile_preview) (MetaPlugin         *plugin,
                              MetaWindow         *window,
                              MetaRectangle      *tile_rect,
-                             int                tile_monitor_number);
+                             int                tile_monitor_number,
+                             guint              snap_queued);
 
   void (*hide_tile_preview) (MetaPlugin         *plugin);
+
+  void (*show_hud_preview) (MetaPlugin          *plugin,
+                            guint               current_proximity_zone,
+                            MetaRectangle       *work_area,
+                            guint               snap_queued);
+
+  void (*hide_hud_preview) (MetaPlugin         *plugin);
 
   /*
    * Called if an effects should be killed prematurely; the plugin must

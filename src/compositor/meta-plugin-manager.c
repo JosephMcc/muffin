@@ -331,7 +331,8 @@ gboolean
 meta_plugin_manager_show_tile_preview (MetaPluginManager *plugin_mgr,
                                        MetaWindow        *window,
                                        MetaRectangle     *tile_rect,
-                                       int               tile_monitor_number)
+                                       int               tile_monitor_number,
+                                       guint             snap_queued)
 {
     MetaPlugin *plugin = plugin_mgr->plugin;
     MetaPluginClass *klass = META_PLUGIN_GET_CLASS (plugin);
@@ -342,7 +343,7 @@ meta_plugin_manager_show_tile_preview (MetaPluginManager *plugin_mgr,
 
     if (klass->show_tile_preview)
     {
-        klass->show_tile_preview (plugin, window, tile_rect, tile_monitor_number);
+        klass->show_tile_preview (plugin, window, tile_rect, tile_monitor_number, snap_queued);
         return TRUE;
     }
 
@@ -362,6 +363,48 @@ meta_plugin_manager_hide_tile_preview (MetaPluginManager *plugin_mgr)
     if (klass->hide_tile_preview)
     {
         klass->hide_tile_preview (plugin);
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+gboolean
+meta_plugin_manager_show_hud_preview (MetaPluginManager *plugin_mgr,
+                                      guint             current_proximity_zone,
+                                      MetaRectangle     *work_area,
+                                      guint             snap_queued)
+{
+    MetaPlugin *plugin = plugin_mgr->plugin;
+    MetaPluginClass *klass = META_PLUGIN_GET_CLASS (plugin);
+    MetaDisplay *display = meta_screen_get_display (plugin_mgr->screen);
+
+    if (display->display_opening)
+        return FALSE;
+
+    if (klass->show_hud_preview)
+    {
+        klass->show_hud_preview (plugin, current_proximity_zone,
+                                 work_area, snap_queued);
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+gboolean
+meta_plugin_manager_hide_hud_preview (MetaPluginManager *plugin_mgr)
+{
+    MetaPlugin *plugin = plugin_mgr->plugin;
+    MetaPluginClass *klass = META_PLUGIN_GET_CLASS (plugin);
+    MetaDisplay *display = meta_screen_get_display (plugin_mgr->screen);
+
+    if (display->display_opening)
+        return FALSE;
+
+    if (klass->hide_hud_preview)
+    {
+        klass->hide_hud_preview (plugin);
         return TRUE;
     }
 

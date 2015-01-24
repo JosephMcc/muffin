@@ -10123,12 +10123,13 @@ meta_window_get_tile_threshold_area_for_mode (MetaWindow    *window,
   g_return_if_fail (mode != META_TILE_NONE);
 
   if (window != NULL) {
-      tile_monitor_number = window->tile_monitor_number;
-      if (tile_monitor_number < 0)
-        {
-          meta_warning ("%s called with an invalid monitor number; using 0 instead\n", G_STRFUNC);
-          tile_monitor_number = 0;
-        }
+      tile_monitor_number = meta_window_get_current_tile_monitor_number(window);
+      // tile_monitor_number = window->tile_monitor_number;
+      // if (tile_monitor_number < 0)
+      //   {
+      //     meta_warning ("%s called with an invalid monitor number; using 0 instead\n", G_STRFUNC);
+      //     tile_monitor_number = 0;
+      //   }
       meta_window_get_work_area_for_monitor (window, tile_monitor_number, tile_area);
   } else {
     tile_area->x = work_area.x;

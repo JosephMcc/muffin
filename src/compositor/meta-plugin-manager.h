@@ -78,8 +78,16 @@ gboolean meta_plugin_manager_xevent_filter (MetaPluginManager *mgr,
 gboolean meta_plugin_manager_show_tile_preview (MetaPluginManager *plugin_mgr,
                                                 MetaWindow        *window,
                                                 MetaRectangle     *tile_rect,
-                                                int               tile_monitor_number);
+                                                int               tile_monitor_number,
+                                                guint             snap_queued);
 
 gboolean meta_plugin_manager_hide_tile_preview (MetaPluginManager *plugin_mgr);
+
+gboolean meta_plugin_manager_show_hud_preview (MetaPluginManager *plugin_mgr,
+                                               guint             current_proximity_zone,
+                                               MetaRectangle     *work_area,
+                                               guint             snap_queued);
+
+gboolean meta_plugin_manager_hide_hud_preview (MetaPluginManager *plugin_mgr);
 
 #endif

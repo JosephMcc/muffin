@@ -40,6 +40,7 @@
 
 #define ACTOR_DATA_KEY "MCCP-Default-actor-data"
 #define SCREEN_TILE_PREVIEW_DATA_KEY "MCCP-Default-screen-tile-preview-data"
+#define SCREEN_HUD_PREVIEW_DATA_KEY "MCCP-Default-screen-hud-preview-data"
 
 #define META_TYPE_DEFAULT_PLUGIN            (meta_default_plugin_get_type ())
 #define META_DEFAULT_PLUGIN(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), META_TYPE_DEFAULT_PLUGIN, MetaDefaultPlugin))
@@ -69,6 +70,7 @@ struct _MetaDefaultPluginClass
 
 static GQuark actor_data_quark = 0;
 static GQuark screen_tile_preview_data_quark = 0;
+static GQuark screen_hud_preview_data_quark = 0;
 
 static void minimize   (MetaPlugin      *plugin,
                         MetaWindowActor *actor);
@@ -101,8 +103,15 @@ static void kill_switch_workspace (MetaPlugin      *plugin);
 static void show_tile_preview (MetaPlugin       *plugin,
                                MetaWindow       *window,
                                MetaRectangle    *tile_rect,
-                               int              tile_monitor_number);
+                               int              tile_monitor_number,
+                               guint            snap_queued);
 static void hide_tile_preview (MetaPlugin       *plugin);
+
+static void show_hud_preview (MetaPlugin        *plugin,
+                              guint             current_proximity_zone,
+                              MetaRectangle     *work_area,
+                              guint             snap_queued);
+static void hide_hud_preview (MetaPlugin        *plugin);
 
 static const MetaPluginInfo * plugin_info (MetaPlugin *plugin);
 
@@ -150,11 +159,15 @@ typedef struct
 typedef struct _ScreenTilePreview
 {
     ClutterActor    *actor;
-
     GdkRGBA         *preview_color;
-
     MetaRectangle   tile_rect;
 } ScreenTilePreview;
+
+typedef struct _ScreenHudPreview
+{
+    ClutterActor    *actor;
+    GdkRGBA         *preview_color;
+} ScreenHudPreview;
 
 
 static void
@@ -247,6 +260,8 @@ meta_default_plugin_class_init (MetaDefaultPluginClass *klass)
   plugin_class->switch_workspace = switch_workspace;
   plugin_class->show_tile_preview = show_tile_preview;
   plugin_class->hide_tile_preview = hide_tile_preview;
+  plugin_class->show_hud_preview = show_hud_preview;
+  plugin_class->hide_hud_preview = hide_hud_preview;
   plugin_class->plugin_info      = plugin_info;
   plugin_class->kill_window_effects   = kill_window_effects;
   plugin_class->kill_switch_workspace = kill_switch_workspace;
@@ -761,7 +776,7 @@ free_screen_tile_preview (gpointer data)
 {
     ScreenTilePreview *preview = data;
 
-    if (G_LIKELY (preview !=NULL))
+    if (G_LIKELY (preview != NULL))
     {
         clutter_actor_destroy (preview->actor);
         g_slice_free (ScreenTilePreview, preview);
@@ -797,7 +812,8 @@ static void
 show_tile_preview (MetaPlugin       *plugin,
                    MetaWindow       *window,
                    MetaRectangle    *tile_rect,
-                   int              tile_monitor_number)
+                   int              tile_monitor_number,
+                   guint            snap_queued)
 {
    MetaScreen *screen = meta_plugin_get_screen (plugin);
    ScreenTilePreview *preview = get_screen_tile_preview (screen);
@@ -826,6 +842,74 @@ hide_tile_preview (MetaPlugin *plugin)
 {
     MetaScreen *screen = meta_plugin_get_screen (plugin);
     ScreenTilePreview *preview = get_screen_tile_preview (screen);
+
+    clutter_actor_hide (preview->actor);
+}
+
+static void
+free_screen_hud_preview (gpointer data)
+{
+    ScreenHudPreview *preview = data;
+
+    if (G_LIKELY (preview != NULL))
+    {
+        clutter_actor_destroy (preview->actor);
+        g_slice_free (ScreenHudPreview, preview);
+    }
+}
+
+static ScreenHudPreview *
+get_screen_hud_preview (MetaScreen *screen)
+{
+    ScreenHudPreview *preview = g_object_get_qdata (G_OBJECT (screen), screen_hud_preview_data_quark);
+
+    if (G_UNLIKELY (screen_hud_preview_data_quark == 0))
+        screen_hud_preview_data_quark = g_quark_from_static_string (SCREEN_HUD_PREVIEW_DATA_KEY);
+
+    if (G_UNLIKELY (!preview))
+    {
+        preview = g_slice_new0 (ScreenHudPreview);
+
+        preview->actor = clutter_actor_new ();
+        clutter_actor_set_background_color (preview->actor, CLUTTER_COLOR_Blue);
+        clutter_actor_set_opacity (preview->actor, 100);
+
+        clutter_actor_add_child (meta_get_window_group_for_screen (screen), preview->actor);
+        g_object_set_qdata_full (G_OBJECT (screen),
+                                 screen_hud_preview_data_quark, preview,
+                                 free_screen_hud_preview);
+    }
+
+    return preview;
+}
+
+static void
+show_hud_preview (MetaPlugin        *plugin,
+                  guint             current_proximity_zone,
+                  MetaRectangle     *work_area,
+                  guint             snap_queued)
+{
+    MetaScreen *screen = meta_plugin_get_screen (plugin);
+    ScreenHudPreview *preview = get_screen_hud_preview (screen);
+    // ClutterActor *window_actor;
+
+    if (CLUTTER_ACTOR_IS_VISIBLE (preview->actor))
+        return;
+
+    clutter_actor_set_position (preview->actor, 100, 100);
+    clutter_actor_set_size (preview->actor, 200, 200);
+
+    clutter_actor_show (preview->actor);
+
+    // window_actor = CLUTTER_ACTOR (meta_window_get_compositor_private (window));
+    // clutter_actor_lower (preview->actor, window_actor);
+}
+
+static void
+hide_hud_preview (MetaPlugin *plugin)
+{
+    MetaScreen *screen = meta_plugin_get_screen (plugin);
+    ScreenHudPreview *preview = get_screen_hud_preview (screen);
 
     clutter_actor_hide (preview->actor);
 }
