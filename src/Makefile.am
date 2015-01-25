@@ -6,6 +6,9 @@ lib_LTLIBRARIES = libmuffin.la
 SUBDIRS=wm-tester tools compositor/plugins
 
 AM_CPPFLAGS=								\
+    -DCLUTTER_ENABLE_EXPERIMENTAL_API   \
+    -DCOGL_ENABLE_EXPERIMENTAL_API      \
+    -DCOGL_ENABLE_EXPERIMENTAL_2_0_API      \
 	$(MUFFIN_CFLAGS)						\
 	-I$(srcdir)							\
 	-I$(srcdir)/core						\
@@ -38,12 +41,17 @@ libmuffin_la_SOURCES =				\
 	core/boxes.c				\
 	core/boxes-private.h			\
 	meta/boxes.h				\
+    compositor/clutter-utils.c  \
+    compositor/clutter-utils.h  \
 	compositor/cogl-utils.c			\
 	compositor/cogl-utils.h			\
 	compositor/compositor.c			\
 	compositor/compositor-private.h		\
+    compositor/meta-background.c        \
 	compositor/meta-background-actor.c	\
 	compositor/meta-background-actor-private.h	\
+    compositor/meta-background-group.c  \
+    compositor/meta-background-group-private.h  \
 	compositor/meta-module.c		\
 	compositor/meta-module.h		\
 	compositor/meta-plugin.c		\
@@ -65,7 +73,9 @@ libmuffin_la_SOURCES =				\
 	compositor/region-utils.c		\
 	compositor/region-utils.h		\
 	meta/compositor.h			\
+    meta/meta-background.h      \
 	meta/meta-background-actor.h		\
+    meta/meta-background-group.h        \
 	meta/meta-plugin.h			\
 	meta/meta-shadow-factory.h		\
 	meta/meta-window-actor.h		\
@@ -170,6 +180,8 @@ libmuffininclude_base_headers =		\
 	meta/keybindings.h			\
 	meta/main.h				\
 	meta/meta-background-actor.h		\
+    meta/meta-background-group.h        \
+    meta/meta-background.h      \
 	meta/meta-plugin.h			\
 	meta/meta-shaped-texture.h		\
 	meta/meta-shadow-factory.h		\
