@@ -139,53 +139,49 @@ meta_plugin_manager_event_simple (MetaPluginManager *plugin_mgr,
                                   MetaWindowActor   *actor,
                                   unsigned long      event)
 {
-  MetaPlugin *plugin = plugin_mgr->plugin;
-  MetaPluginClass *klass = META_PLUGIN_GET_CLASS (plugin);
-  MetaDisplay *display  = meta_screen_get_display (plugin_mgr->screen);
-  gboolean retval = FALSE;
+    MetaPlugin *plugin = plugin_mgr->plugin;
+    MetaPluginClass *klass = META_PLUGIN_GET_CLASS (plugin);
+    MetaDisplay *display  = meta_screen_get_display (plugin_mgr->screen);
+    gboolean retval = FALSE;
 
-  if (display->display_opening)
-    return FALSE;
+    if (display->display_opening)
+      return FALSE;
 
-  switch (event)
-  {
-    case META_PLUGIN_MINIMIZE:
-      if (klass->minimize)
-      {
-          retval = TRUE;
-          meta_plugin_manager_kill_window_effects (
-              plugin_mgr,
-              actor);
+    switch (event)
+    {
+        case META_PLUGIN_MINIMIZE:
+            if (klass->minimize)
+            {
+                retval = TRUE;
+                meta_plugin_manager_kill_window_effects (plugin_mgr, actor);
 
-           _meta_plugin_effect_started (plugin);
-           klass->minimize (plugin, actor);
-      }
-      break;
-    case META_PLUGIN_MAP:
-      if (klass->map)
-      {
-          retval = TRUE;
-          meta_plugin_manager_kill_window_effects (
-              plugin_mgr,
-              actor);
+                _meta_plugin_effect_started (plugin);
+                klass->minimize (plugin, actor);
+            }
+            break;
+        case META_PLUGIN_MAP:
+            if (klass->map)
+            {
+                retval = TRUE;
+                meta_plugin_manager_kill_window_effects (plugin_mgr, actor);
 
-          _meta_plugin_effect_started (plugin);
-          klass->map (plugin, actor);
-      }
-      break;
-    case META_PLUGIN_DESTROY:
-      if (klass->destroy)
-      {
-          retval = TRUE;
-          _meta_plugin_effect_started (plugin);
-          klass->destroy (plugin, actor);
-      }
-      break;
-    default:
-      g_warning ("Incorrect handler called for event %lu", event);
-  }
+                _meta_plugin_effect_started (plugin);
+                klass->map (plugin, actor);
+            }
+            break;
+        case META_PLUGIN_DESTROY:
+            if (klass->destroy)
+            {
+                retval = TRUE;
+                _meta_plugin_effect_started (plugin);
+                klass->destroy (plugin, actor);
+            }
+            break;
+        default:
+                g_warning ("Incorrect handler called for event %lu", event);
+    }
 
-  return retval;
+    return retval;
 }
 
 /*
@@ -206,18 +202,18 @@ meta_plugin_manager_event_maximize (MetaPluginManager *plugin_mgr,
                                     gint               target_width,
                                     gint               target_height)
 {
-  MetaPlugin *plugin = plugin_mgr->plugin;
-  MetaPluginClass *klass = META_PLUGIN_GET_CLASS (plugin);
-  MetaDisplay *display  = meta_screen_get_display (plugin_mgr->screen);
-  gboolean retval = FALSE;
+    MetaPlugin *plugin = plugin_mgr->plugin;
+    MetaPluginClass *klass = META_PLUGIN_GET_CLASS (plugin);
+    MetaDisplay *display  = meta_screen_get_display (plugin_mgr->screen);
+    gboolean retval = FALSE;
 
-  if (display->display_opening)
-    return FALSE;
+    if (display->display_opening)
+        return FALSE;
 
     switch (event)
     {
         case META_PLUGIN_MAXIMIZE:
-          if (klass->maximize)
+            if (klass->maximize)
             {
                 retval = TRUE;
                 meta_plugin_manager_kill_window_effects (
@@ -228,11 +224,11 @@ meta_plugin_manager_event_maximize (MetaPluginManager *plugin_mgr,
                 klass->maximize (plugin, actor,
                                target_x, target_y,
                                target_width, target_height);
-          }
-          break;
+            }
+            break;
         case META_PLUGIN_UNMAXIMIZE:
-          if (klass->unmaximize)
-          {
+            if (klass->unmaximize)
+            {
                 retval = TRUE;
                 meta_plugin_manager_kill_window_effects (
                   plugin_mgr,
@@ -242,11 +238,11 @@ meta_plugin_manager_event_maximize (MetaPluginManager *plugin_mgr,
                 klass->unmaximize (plugin, actor,
                                    target_x, target_y,
                                    target_width, target_height);
-          }
-          break;
+            }
+            break;
         case META_PLUGIN_TILE:
-          if (klass->tile)
-          {
+            if (klass->tile)
+            {
                 retval = TRUE;
                 meta_plugin_manager_kill_window_effects (plugin_mgr,
                                                        actor);
@@ -254,13 +250,13 @@ meta_plugin_manager_event_maximize (MetaPluginManager *plugin_mgr,
                 klass->tile (plugin, actor,
                              target_x, target_y,
                              target_width, target_height);
-          }
-          break;
+            }
+            break;
         default:
-          g_warning ("Incorrect handler called for event %lu", event);
+            g_warning ("Incorrect handler called for event %lu", event);
     }
 
-  return retval;
+    return retval;
 }
 
 /*
@@ -277,24 +273,24 @@ meta_plugin_manager_switch_workspace (MetaPluginManager   *plugin_mgr,
                                       gint                 to,
                                       MetaMotionDirection  direction)
 {
-  MetaPlugin *plugin = plugin_mgr->plugin;
-  MetaPluginClass *klass = META_PLUGIN_GET_CLASS (plugin);
-  MetaDisplay *display  = meta_screen_get_display (plugin_mgr->screen);
-  gboolean retval = FALSE;
+    MetaPlugin *plugin = plugin_mgr->plugin;
+    MetaPluginClass *klass = META_PLUGIN_GET_CLASS (plugin);
+    MetaDisplay *display  = meta_screen_get_display (plugin_mgr->screen);
+    gboolean retval = FALSE;
 
-  if (display->display_opening)
-    return FALSE;
+    if (display->display_opening)
+        return FALSE;
 
     if (klass->switch_workspace)
     {
-       retval = TRUE;
-       meta_plugin_manager_kill_switch_workspace (plugin_mgr);
+         retval = TRUE;
+         meta_plugin_manager_kill_switch_workspace (plugin_mgr);
 
-       _meta_plugin_effect_started (plugin);
-       klass->switch_workspace (plugin, from, to, direction);
-}
+         _meta_plugin_effect_started (plugin);
+         klass->switch_workspace (plugin, from, to, direction);
+    }
 
-  return retval;
+    return retval;
 }
 
 /*

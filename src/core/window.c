@@ -10124,12 +10124,6 @@ meta_window_get_tile_threshold_area_for_mode (MetaWindow    *window,
 
   if (window != NULL) {
       tile_monitor_number = meta_window_get_current_tile_monitor_number(window);
-      // tile_monitor_number = window->tile_monitor_number;
-      // if (tile_monitor_number < 0)
-      //   {
-      //     meta_warning ("%s called with an invalid monitor number; using 0 instead\n", G_STRFUNC);
-      //     tile_monitor_number = 0;
-      //   }
       meta_window_get_work_area_for_monitor (window, tile_monitor_number, tile_area);
   } else {
     tile_area->x = work_area.x;
@@ -11667,22 +11661,6 @@ meta_window_get_size_limits (const MetaWindow        *window,
       else
         max_size->height = G_MAXINT;
     }
-}
-
-HUDTileRestrictions
-meta_window_get_tile_restrictions (MetaWindow *window)
-{
-    g_return_val_if_fail (window != NULL, 0);
-    HUDTileRestrictions ret = 0;
-
-    if (meta_window_can_tile_side_by_side (window))
-        ret |= HUD_CAN_TILE_SIDE_BY_SIDE;
-    if (meta_window_can_tile_top_bottom (window))
-        ret |= HUD_CAN_TILE_TOP_BOTTOM;
-    if (meta_window_can_tile_corner (window))
-        ret |= HUD_CAN_TILE_CORNER;
-
-    return ret;
 }
 
 #define ORIGIN_CONSTANT 1

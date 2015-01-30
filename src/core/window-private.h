@@ -44,7 +44,6 @@
 #include <X11/Xutil.h>
 #include <cairo.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
-#include "tile-hud.h"
 
 typedef struct _MetaWindowQueue MetaWindowQueue;
 
@@ -778,8 +777,6 @@ inline void meta_window_get_size_limits   (const MetaWindow        *window,
                                           MetaRectangle *max_size);
 
 void meta_window_compute_tile_match (MetaWindow *window);
-
-HUDTileRestrictions meta_window_get_tile_restrictions (MetaWindow *window);
 
 gboolean meta_window_mouse_on_edge (MetaWindow *window,
                                     gint        x,
