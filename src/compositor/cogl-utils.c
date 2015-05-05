@@ -245,4 +245,3 @@ meta_cogl_texture_new_with_size_wrapper           (int width,
 
     return texture;
 }
-

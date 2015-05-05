@@ -7,10 +7,12 @@
 
 #include <gdk/gdk.h> /* for gdk_rectangle_intersect() */
 
+#include "clutter-utils.h"
 #include "compositor-private.h"
 #include "meta-window-actor-private.h"
 #include "meta-window-group.h"
 #include "meta-background-actor-private.h"
+#include "meta-background-group-private.h"
 
 struct _MetaWindowGroupClass
 {
@@ -30,11 +32,11 @@ G_DEFINE_TYPE (MetaWindowGroup, meta_window_group, CLUTTER_TYPE_GROUP);
  * 1:1 transform. We do that by converting the transformed coordinates
  * to 24.8 fixed-point before checking if they look right.
  */
-static inline int
-round_to_fixed (float x)
-{
-  return roundf (x * 256);
-}
+// static inline int
+// round_to_fixed (float x)
+// {
+//   return roundf (x * 256);
+// }
 
 /* We can only (easily) apply our logic for figuring out what a window
  * obscures if is not transformed. This function does that check and
@@ -56,50 +58,50 @@ round_to_fixed (float x)
  * actor. The approach we take here is to just require everything
  * to be within 1/256th of a pixel.
  */
-static gboolean
-actor_is_untransformed (ClutterActor *actor,
-                        int          *x_origin,
-                        int          *y_origin)
-{
-  gfloat widthf, heightf;
-  int width, height;
-  ClutterVertex verts[4];
-  int v0x, v0y, v1x, v1y, v2x, v2y, v3x, v3y;
-  int x, y;
+// static gboolean
+// actor_is_untransformed (ClutterActor *actor,
+//                         int          *x_origin,
+//                         int          *y_origin)
+// {
+//   gfloat widthf, heightf;
+//   int width, height;
+//   ClutterVertex verts[4];
+//   int v0x, v0y, v1x, v1y, v2x, v2y, v3x, v3y;
+//   int x, y;
 
-  clutter_actor_get_size (actor, &widthf, &heightf);
-  width = round_to_fixed (widthf); height = round_to_fixed (heightf);
+//   clutter_actor_get_size (actor, &widthf, &heightf);
+//   width = round_to_fixed (widthf); height = round_to_fixed (heightf);
 
-  clutter_actor_get_abs_allocation_vertices (actor, verts);
-  v0x = round_to_fixed (verts[0].x); v0y = round_to_fixed (verts[0].y);
-  v1x = round_to_fixed (verts[1].x); v1y = round_to_fixed (verts[1].y);
-  v2x = round_to_fixed (verts[2].x); v2y = round_to_fixed (verts[2].y);
-  v3x = round_to_fixed (verts[3].x); v3y = round_to_fixed (verts[3].y);
+//   clutter_actor_get_abs_allocation_vertices (actor, verts);
+//   v0x = round_to_fixed (verts[0].x); v0y = round_to_fixed (verts[0].y);
+//   v1x = round_to_fixed (verts[1].x); v1y = round_to_fixed (verts[1].y);
+//   v2x = round_to_fixed (verts[2].x); v2y = round_to_fixed (verts[2].y);
+  // v3x = round_to_fixed (verts[3].x); v3y = round_to_fixed (verts[3].y);
 
   /* Using shifting for converting fixed => int, gets things right for
    * negative values. / 256. wouldn't do the same
    */
-  x = v0x >> 8;
-  y = v0y >> 8;
+  // x = v0x >> 8;
+  // y = v0y >> 8;
 
   /* At integral coordinates? */
-  if (x * 256 != v0x || y * 256 != v0y)
-    return FALSE;
+  // if (x * 256 != v0x || y * 256 != v0y)
+    // return FALSE;
 
   /* Not scaled? */
-  if (v1x - v0x != width || v2y - v0y != height)
-    return FALSE;
+  // if (v1x - v0x != width || v2y - v0y != height)
+  //   return FALSE;
 
   /* Not rotated/skewed? */
-  if (v0x != v2x || v0y != v1y ||
-      v3x != v1x || v3y != v2y)
-    return FALSE;
+  // if (v0x != v2x || v0y != v1y ||
+  //     v3x != v1x || v3y != v2y)
+  //   return FALSE;
 
-  *x_origin = x;
-  *y_origin = y;
+  // *x_origin = x;
+  // *y_origin = y;
 
-  return TRUE;
-}
+  // return TRUE;
+// }
 
 static void
 meta_window_group_paint (ClutterActor *actor)
@@ -171,7 +173,7 @@ meta_window_group_paint (ClutterActor *actor)
           MetaWindowActor *window_actor = l->data;
           int x, y;
 
-          if (!actor_is_untransformed (CLUTTER_ACTOR (window_actor), &x, &y))
+          if (!meta_actor_is_untransformed (CLUTTER_ACTOR (window_actor), &x, &y))
             continue;
 
           /* Temporarily move to the coordinate system of the actor */
@@ -189,10 +191,15 @@ meta_window_group_paint (ClutterActor *actor)
           meta_window_actor_set_visible_region_beneath (window_actor, visible_region);
           cairo_region_translate (visible_region, x, y);
         }
-      else if (META_IS_BACKGROUND_ACTOR (l->data))
+      else if (META_IS_BACKGROUND_ACTOR (l->data) ||
+               META_IS_BACKGROUND_GROUP (l->data))
         {
-          MetaBackgroundActor *background_actor = l->data;
-          meta_background_actor_set_visible_region (background_actor, visible_region);
+          ClutterActor *background_actor = l->data;
+          
+          if (META_IS_BACKGROUND_GROUP (background_actor))
+            meta_background_group_set_visible_region (META_BACKGROUND_GROUP (background_actor), visible_region);
+          else
+            meta_background_actor_set_visible_region (META_BACKGROUND_ACTOR (background_actor), visible_region);
         }
     }
 
