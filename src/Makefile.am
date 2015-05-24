@@ -8,6 +8,7 @@ SUBDIRS=wm-tester tools compositor/plugins
 AM_CPPFLAGS=								\
 	-DCLUTTER_ENABLE_EXPERIMENTAL_API		\
 	-DCOGL_ENABLE_EXPERIMENTAL_API			\
+	-DCOGL_ENABLE_EXPERIMENTAL_2_0_API		\
 	$(MUFFIN_CFLAGS)						\
 	-I$(srcdir)							\
 	-I$(srcdir)/core						\

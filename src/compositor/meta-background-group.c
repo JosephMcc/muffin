@@ -81,12 +81,20 @@ meta_background_group_set_visible_region (MetaBackgroundGroup *self,
   g_list_free (children);
 }
 
+/**
+ * meta_background_group_new:
+ *
+ * Creates a new background group.
+ *
+ * Return value: the newly created background group
+ */
 ClutterActor *
 meta_background_group_new (void)
 {
   MetaBackgroundGroup *background_group;
 
   background_group = g_object_new (META_TYPE_BACKGROUND_GROUP, NULL);
+  g_printerr ("creating new meta background group");
 
   return CLUTTER_ACTOR (background_group);
 }

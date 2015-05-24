@@ -33,12 +33,6 @@
 #include <meta/meta-background.h>
 #include "meta-background-actor-private.h"
 
-#if G_BYTE_ORDER == G_LITTLE_ENDIAN
-#define TEXTURE_FORMAT COGL_PIXEL_FORMAT_BGRA_8888_PRE
-#else
-#define TEXTURE_FORMAT COGL_PIXEL_FORMAT_ARGB_8888_PRE
-#endif
-
 #define TEXTURE_LOOKUP_SHADER_DECLARATIONS                                     \
 "uniform vec2 pixel_step;\n"                                                   \
 "vec4 apply_blur(in sampler2D texture, in vec2 coordinates) {\n"               \
@@ -398,13 +392,13 @@ meta_background_paint_content (ClutterContent   *content,
    */
   if (META_IS_BACKGROUND_ACTOR (actor))
     {
-      cairo_region_t *visible_region;
-      visible_region = meta_background_actor_get_visible_region (META_BACKGROUND_ACTOR (actor));
+      cairo_region_t *clip_region;
+      clip_region = meta_background_actor_get_clip_region (META_BACKGROUND_ACTOR (actor));
 
-      if (visible_region != NULL)
+      if (clip_region != NULL)
         {
-          cairo_region_intersect (paintable_region, visible_region);
-          cairo_region_destroy (visible_region);
+          cairo_region_intersect (paintable_region, clip_region);
+          cairo_region_destroy (clip_region);
         }
     }
 
@@ -456,6 +450,17 @@ meta_background_dispose (GObject *object)
                    cogl_object_unref);
 
   G_OBJECT_CLASS (meta_background_parent_class)->dispose (object);
+}
+
+static void
+meta_background_finalize (GObject *object)
+{
+  MetaBackground        *self = META_BACKGROUND (object);
+  MetaBackgroundPrivate *priv = self->priv;
+
+  g_free (priv->filename);
+
+  G_OBJECT_CLASS (meta_background_parent_class)->finalize (object);
 }
 
 static void
@@ -689,6 +694,7 @@ meta_background_class_init (MetaBackgroundClass *klass)
   g_type_class_add_private (klass, sizeof (MetaBackgroundPrivate));
 
   object_class->dispose = meta_background_dispose;
+  object_class->finalize = meta_background_finalize;
   object_class->set_property = meta_background_set_property;
   object_class->get_property = meta_background_get_property;
 
@@ -757,7 +763,8 @@ static void
 unset_texture (MetaBackground *self)
 {
   MetaBackgroundPrivate *priv = self->priv;
-  cogl_pipeline_set_layer_texture (priv->pipeline, 0, NULL);
+  if (priv->pipeline != NULL)
+    cogl_pipeline_set_layer_texture (priv->pipeline, 0, NULL);
 
   g_clear_pointer (&priv->texture,
                    (GDestroyNotify)
@@ -932,7 +939,7 @@ meta_background_load_gradient (MetaBackground             *self,
   pixels[7] = second_color->alpha;
   texture = cogl_texture_new_from_data (width, height,
                                         COGL_TEXTURE_NO_SLICING,
-                                        TEXTURE_FORMAT,
+                                        COGL_PIXEL_FORMAT_RGBA_8888,
                                         COGL_PIXEL_FORMAT_ANY,
                                         4,
                                         pixels);
@@ -1052,6 +1059,7 @@ meta_background_load_file_async (MetaBackground          *self,
     g_task_set_task_data (task, task_data, (GDestroyNotify) load_file_task_data_free);
 
     g_task_run_in_thread (task, (GTaskThreadFunc) load_file);
+    g_object_unref (task);
 }
 
 /**
@@ -1078,6 +1086,7 @@ meta_background_load_file_finish (MetaBackground  *self,
   int width, height, row_stride;
   guchar *pixels;
   gboolean has_alpha;
+  gboolean loaded = FALSE;
 
   g_return_val_if_fail (g_task_is_valid (result, self), FALSE);
 
@@ -1086,7 +1095,7 @@ meta_background_load_file_finish (MetaBackground  *self,
   pixbuf = g_task_propagate_pointer (task, error);
 
   if (pixbuf == NULL)
-    return FALSE;
+    goto out;
 
   task_data = g_task_get_task_data (task);
 
@@ -1112,7 +1121,7 @@ meta_background_load_file_finish (MetaBackground  *self,
                            COGL_BITMAP_ERROR,
                            COGL_BITMAP_ERROR_FAILED,
                            _("background texture could not be created from file"));
-      return FALSE;
+      goto out;
     }
 
   cogl_object_set_user_data (COGL_OBJECT (texture),
@@ -1128,8 +1137,12 @@ meta_background_load_file_finish (MetaBackground  *self,
   set_texture (self, texture);
 
   clutter_content_invalidate (CLUTTER_CONTENT (self));
+  loaded = TRUE;
 
-  return TRUE;
+out:
+  if (pixbuf != NULL)
+    g_object_unref (pixbuf);
+  return loaded;
 }
 
 /**
