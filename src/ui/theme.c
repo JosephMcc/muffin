@@ -4650,7 +4650,7 @@ button_rect (MetaButtonType           type,
     }
 }
 
-LOCAL_SYMBOL LOCAL_SYMBOL void
+static void
 meta_frame_style_draw_with_style (MetaFrameStyle          *style,
                                   GtkStyleContext         *style_gtk,
                                   cairo_t                 *cr,
