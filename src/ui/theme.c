@@ -5607,7 +5607,7 @@ meta_theme_get_frame_borders (MetaTheme        *theme,
                                  borders);
 }
 
-LOCAL_SYMBOL void
+static void
 meta_theme_calc_geometry (MetaTheme              *theme,
                           MetaFrameType           type,
                           int                     text_height,
