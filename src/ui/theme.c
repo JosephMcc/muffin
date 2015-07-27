@@ -4165,17 +4165,6 @@ meta_draw_op_draw_with_style (const MetaDrawOp    *op,
 
 }
 
-LOCAL_SYMBOL void
-meta_draw_op_draw (const MetaDrawOp    *op,
-                   GtkWidget           *widget,
-                   cairo_t             *cr,
-                   const MetaDrawInfo  *info,
-                   MetaRectangle        logical_region)
-{
-  meta_draw_op_draw_with_style (op, gtk_widget_get_style_context (widget),
-                                widget, cr, info, logical_region);
-}
-
 /**
  * meta_draw_op_list_new: (skip)
  *
@@ -4284,18 +4273,6 @@ meta_draw_op_list_draw_with_style  (const MetaDrawOpList *op_list,
     }
 
   cairo_restore (cr);
-}
-
-LOCAL_SYMBOL void
-meta_draw_op_list_draw  (const MetaDrawOpList *op_list,
-                         GtkWidget            *widget,
-                         cairo_t              *cr,
-                         const MetaDrawInfo   *info,
-                         MetaRectangle         rect)
-
-{
-  meta_draw_op_list_draw_with_style (op_list, gtk_widget_get_style_context (widget), widget,
-                                     cr, info, rect);
 }
 
 LOCAL_SYMBOL void
@@ -4917,25 +4894,6 @@ meta_frame_style_draw_with_style (MetaFrameStyle          *style,
 
       ++i;
     }
-}
-
-LOCAL_SYMBOL void
-meta_frame_style_draw (MetaFrameStyle          *style,
-                       GtkWidget               *widget,
-                       cairo_t                 *cr,
-                       const MetaFrameGeometry *fgeom,
-                       int                      client_width,
-                       int                      client_height,
-                       PangoLayout             *title_layout,
-                       int                      text_height,
-                       MetaButtonState          button_states[META_BUTTON_TYPE_LAST],
-                       GdkPixbuf               *mini_icon,
-                       GdkPixbuf               *icon)
-{
-  meta_frame_style_draw_with_style (style, gtk_widget_get_style_context (widget), widget,
-                                    cr, fgeom, client_width, client_height,
-                                    title_layout, text_height,
-                                    button_states, mini_icon, icon);
 }
 
 LOCAL_SYMBOL MetaFrameStyleSet*
