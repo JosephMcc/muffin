@@ -616,7 +616,7 @@ strip_button (MetaButtonSpace *func_rects[MAX_BUTTONS_PER_CORNER],
   return FALSE; /* did not strip anything */
 }
 
-LOCAL_SYMBOL void
+static void
 meta_frame_layout_calc_geometry (const MetaFrameLayout  *layout,
                                  int                     text_height,
                                  MetaFrameFlags          flags,
@@ -5607,7 +5607,7 @@ meta_theme_get_frame_borders (MetaTheme        *theme,
                                  borders);
 }
 
-static void
+LOCAL_SYMBOL void
 meta_theme_calc_geometry (MetaTheme              *theme,
                           MetaFrameType           type,
                           int                     text_height,

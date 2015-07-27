@@ -32,6 +32,7 @@
 #include "meta-shadow-factory-private.h"
 #include "meta-window-actor-private.h"
 #include "meta-texture-rectangle.h"
+#include "cogl-utils.h"
 
 enum {
   POSITION_CHANGED,
@@ -2198,20 +2199,19 @@ generate_mask (MetaWindowActor  *self,
                                                  COGL_PIXEL_FORMAT_A_8,
                                                  COGL_PIXEL_FORMAT_A_8,
                                                  stride,
-                                                 mask_data,
-                                                 NULL /* error */);
+                                                 mask_data);
     }
   else
     {
       /* Note: we don't allow slicing for this texture because we
        * need to use it with multi-texturing which doesn't support
        * sliced textures */
-      mask_texture = cogl_texture_new_from_data (tex_width, tex_height,
-                                                 COGL_TEXTURE_NO_SLICING,
-                                                 COGL_PIXEL_FORMAT_A_8,
-                                                 COGL_PIXEL_FORMAT_ANY,
-                                                 stride,
-                                                 mask_data);
+      mask_texture = meta_cogl_texture_new_from_data_wrapper (tex_width, tex_height,
+                                                              COGL_TEXTURE_NO_SLICING,
+                                                              COGL_PIXEL_FORMAT_A_8,
+                                                              COGL_PIXEL_FORMAT_ANY,
+                                                              stride,
+                                                              mask_data);
     }
 
   meta_shaped_texture_set_mask_texture (META_SHAPED_TEXTURE (priv->actor),
