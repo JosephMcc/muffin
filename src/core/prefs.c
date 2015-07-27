@@ -61,7 +61,6 @@
 
 #define KEY_MIN_WINDOW_OPACITY "min-window-opacity"
 #define KEY_WS_NAMES_GNOME "workspace-names"
-#define KEY_LIVE_HIDDEN_WINDOWS "live-hidden-windows"
 #define KEY_WORKSPACES_ONLY_ON_PRIMARY "workspaces-only-on-primary"
 
 #define KEY_MOUSEWHEEL_ZOOM_ENABLED "screen-magnifier-enabled"
@@ -124,7 +123,6 @@ static MetaButtonLayout button_layout;
 /* NULL-terminated array */
 static char **workspace_names = NULL;
 
-static gboolean live_hidden_windows = FALSE;
 static gboolean workspaces_only_on_primary = FALSE;
 
 static gboolean legacy_snap = FALSE;
@@ -411,13 +409,6 @@ static MetaBoolPreference preferences_bool[] =
         META_PREF_EDGE_TILING,
       },
       &edge_tiling,
-    },
-    {
-      { KEY_LIVE_HIDDEN_WINDOWS,
-        SCHEMA_MUFFIN,
-        META_PREF_LIVE_HIDDEN_WINDOWS,
-      },
-      &live_hidden_windows,
     },
     {
       { "workspaces-only-on-primary",
@@ -1865,9 +1856,6 @@ meta_preference_to_string (MetaPreference pref)
     case META_PREF_FORCE_FULLSCREEN:
       return "FORCE_FULLSCREEN";
 
-    case META_PREF_LIVE_HIDDEN_WINDOWS:
-      return "LIVE_HIDDEN_WINDOWS";
-
     case META_PREF_WORKSPACES_ONLY_ON_PRIMARY:
       return "WORKSPACES_ONLY_ON_PRIMARY";
 
@@ -2441,27 +2429,6 @@ gboolean
 meta_prefs_get_force_fullscreen (void)
 {
   return force_fullscreen;
-}
-
-gboolean
-meta_prefs_get_live_hidden_windows (void)
-{
-#if 0
-  return live_hidden_windows;
-#else
-  return TRUE;
-#endif
-}
-
-void
-meta_prefs_set_live_hidden_windows (gboolean whether)
-{
-  MetaBasePreference *pref = NULL;
-
-  find_pref (preferences_bool, sizeof(MetaBoolPreference),
-             KEY_LIVE_HIDDEN_WINDOWS, &pref);
-  g_settings_set_boolean (SETTINGS (pref->schema), KEY_LIVE_HIDDEN_WINDOWS,
-                          whether);
 }
 
 gboolean
