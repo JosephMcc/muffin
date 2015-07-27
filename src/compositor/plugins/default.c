@@ -111,8 +111,6 @@ struct _MetaDefaultPluginPrivate
   ClutterActor          *desktop2;
 
   MetaPluginInfo         info;
-
-  gboolean               debug_mode : 1;
 };
 
 /*
@@ -182,20 +180,6 @@ meta_default_plugin_get_property (GObject    *object,
 }
 
 static void
-start (MetaPlugin *plugin)
-{
-  MetaDefaultPluginPrivate *priv   = META_DEFAULT_PLUGIN (plugin)->priv;
-
-  if (meta_plugin_debug_mode (plugin))
-    {
-      g_debug ("Plugin %s: Entering debug mode.", priv->info.name);
-
-      priv->debug_mode = TRUE;
-
-    }
-}
-
-static void
 meta_default_plugin_class_init (MetaDefaultPluginClass *klass)
 {
   GObjectClass      *gobject_class = G_OBJECT_CLASS (klass);
@@ -206,7 +190,6 @@ meta_default_plugin_class_init (MetaDefaultPluginClass *klass)
   gobject_class->set_property    = meta_default_plugin_set_property;
   gobject_class->get_property    = meta_default_plugin_get_property;
 
-  plugin_class->start            = start;
   plugin_class->map              = map;
   plugin_class->minimize         = minimize;
   plugin_class->maximize         = maximize;
