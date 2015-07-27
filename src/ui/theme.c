@@ -3681,7 +3681,6 @@ fill_env (MetaPositionExprEnv *env,
 static void
 meta_draw_op_draw_with_env (const MetaDrawOp    *op,
                             GtkStyleContext     *style_gtk,
-                            GtkWidget           *widget,
                             cairo_t             *cr,
                             const MetaDrawInfo  *info,
                             MetaRectangle        rect,
@@ -4091,7 +4090,7 @@ meta_draw_op_draw_with_env (const MetaDrawOp    *op,
         d_rect.height = parse_size_unchecked (op->data.op_list.height, env);
 
         meta_draw_op_list_draw_with_style (op->data.op_list.op_list,
-                                           style_gtk, widget, cr, info,
+                                           style_gtk, cr, info,
                                 d_rect);
       }
       break;
@@ -4129,7 +4128,7 @@ meta_draw_op_draw_with_env (const MetaDrawOp    *op,
             while (tile.y < (ry + rheight))
               {
                 meta_draw_op_list_draw_with_style (op->data.tile.op_list,
-                                                   style_gtk, widget, cr, info,
+                                                   style_gtk, cr, info,
                                         tile);
 
                 tile.y += tile.height;
@@ -4150,7 +4149,6 @@ meta_draw_op_draw_with_env (const MetaDrawOp    *op,
 LOCAL_SYMBOL void
 meta_draw_op_draw_with_style (const MetaDrawOp    *op,
                               GtkStyleContext     *style_gtk,
-                              GtkWidget           *widget,
                               cairo_t             *cr,
                               const MetaDrawInfo  *info,
                               MetaRectangle        logical_region)
@@ -4159,7 +4157,7 @@ meta_draw_op_draw_with_style (const MetaDrawOp    *op,
 
   fill_env (&env, info, logical_region);
 
-  meta_draw_op_draw_with_env (op, style_gtk, widget, cr,
+  meta_draw_op_draw_with_env (op, style_gtk, cr,
                               info, logical_region,
                               &env);
 
@@ -4219,7 +4217,6 @@ meta_draw_op_list_unref (MetaDrawOpList *op_list)
 LOCAL_SYMBOL void
 meta_draw_op_list_draw_with_style  (const MetaDrawOpList *op_list,
                                     GtkStyleContext      *style_gtk,
-                                    GtkWidget            *widget,
                                     cairo_t              *cr,
                                     const MetaDrawInfo   *info,
                                     MetaRectangle         rect)
@@ -4266,7 +4263,7 @@ meta_draw_op_list_draw_with_style  (const MetaDrawOpList *op_list,
       else if (gdk_cairo_get_clip_rectangle (cr, NULL))
         {
           meta_draw_op_draw_with_env (op,
-                                      style_gtk, widget, cr, info,
+                                      style_gtk, cr, info,
                                       rect,
                                       &env);
         }
@@ -4656,7 +4653,6 @@ button_rect (MetaButtonType           type,
 LOCAL_SYMBOL LOCAL_SYMBOL void
 meta_frame_style_draw_with_style (MetaFrameStyle          *style,
                                   GtkStyleContext         *style_gtk,
-                                  GtkWidget               *widget,
                                   cairo_t                 *cr,
                                   const MetaFrameGeometry *fgeom,
                                   int                      client_width,
@@ -4826,7 +4822,6 @@ meta_frame_style_draw_with_style (MetaFrameStyle          *style,
               m_rect = meta_rect (rect.x, rect.y, rect.width, rect.height);
               meta_draw_op_list_draw_with_style (op_list,
                                                  style_gtk,
-                                                 widget,
                                                  cr,
                                                  &draw_info,
                                                  m_rect);
@@ -4868,7 +4863,6 @@ meta_frame_style_draw_with_style (MetaFrameStyle          *style,
 
                       meta_draw_op_list_draw_with_style (op_list,
                                                          style_gtk,
-                                                         widget,
                                                          cr,
                                                          &draw_info,
                                                          m_rect);
@@ -5522,7 +5516,6 @@ meta_theme_get_title_scale (MetaTheme     *theme,
 LOCAL_SYMBOL void
 meta_theme_draw_frame_with_style (MetaTheme              *theme,
                                   GtkStyleContext        *style_gtk,
-                                  GtkWidget              *widget,
                                   cairo_t                *cr,
                                   MetaFrameType           type,
                                   MetaFrameFlags          flags,
@@ -5557,7 +5550,6 @@ meta_theme_draw_frame_with_style (MetaTheme              *theme,
 
   meta_frame_style_draw_with_style (style,
                                     style_gtk,
-                                    widget,
                                     cr,
                                     &fgeom,
                                     client_width, client_height,
@@ -5582,7 +5574,7 @@ meta_theme_draw_frame (MetaTheme              *theme,
                        GdkPixbuf              *mini_icon,
                        GdkPixbuf              *icon)
 {
-  meta_theme_draw_frame_with_style (theme, gtk_widget_get_style_context (widget), widget,
+  meta_theme_draw_frame_with_style (theme, gtk_widget_get_style_context (widget),
                                     cr, type,flags,
                                     client_width, client_height,
                                     title_layout, text_height,
