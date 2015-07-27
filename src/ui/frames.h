@@ -100,8 +100,6 @@ struct _MetaFrames
   GtkStyleContext *normal_style;
   GHashTable *style_variants;
 
-  int expose_delay_count;
-
   int invalidate_cache_timeout_id;
   GList *invalidate_frames;
   GHashTable *cache;
@@ -167,8 +165,5 @@ void meta_frames_queue_draw (MetaFrames *frames,
 void meta_frames_notify_menu_hide (MetaFrames *frames);
 
 Window meta_frames_get_moving_frame (MetaFrames *frames);
-
-void meta_frames_push_delay_exposes (MetaFrames *frames);
-void meta_frames_pop_delay_exposes  (MetaFrames *frames);
 
 #endif
