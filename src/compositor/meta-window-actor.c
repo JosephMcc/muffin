@@ -2218,6 +2218,8 @@ scan_visible_region (guchar         *mask_data,
   int i, n_rects = cairo_region_num_rectangles (scan_area);
   MetaRegionBuilder builder;
 
+  meta_region_builder_init (&builder);
+
   for (i = 0; i < n_rects; i++)
     {
       int x, y;
