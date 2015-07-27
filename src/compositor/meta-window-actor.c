@@ -19,6 +19,7 @@
 #define COGL_ENABLE_EXPERIMENTAL_API
 #include <cogl/cogl-texture-pixmap-x11.h>
 #include <gdk/gdk.h> /* for gdk_rectangle_union() */
+#include <string.h>
 
 #include <meta/display.h>
 #include <meta/errors.h>
@@ -30,6 +31,7 @@
 #include "compositor-private.h"
 #include "meta-shadow-factory-private.h"
 #include "meta-window-actor-private.h"
+#include "meta-texture-rectangle.h"
 
 enum {
   POSITION_CHANGED,
@@ -2140,121 +2142,82 @@ meta_window_actor_sync_visibility (MetaWindowActor *self)
     }
 }
 
-static inline void
-set_integral_bounding_rect (cairo_rectangle_int_t *rect,
-                            double x, double y,
-                            double width, double height)
-{
-  rect->x = floor(x);
-  rect->y = floor(y);
-  rect->width = ceil(x + width) - rect->x;
-  rect->height = ceil(y + height) - rect->y;
-}
-
 static void
-update_corners (MetaWindowActor   *self,
-                MetaFrameBorders  *borders)
+generate_mask (MetaWindowActor  *self,
+               MetaFrameBorders *borders,
+               cairo_region_t   *shape_region)
 {
   MetaWindowActorPrivate *priv = self->priv;
-  MetaRectangle outer;
-  cairo_rectangle_int_t corner_rects[4];
-  cairo_region_t *corner_region;
-  cairo_path_t *corner_path;
-  float top_left, top_right, bottom_left, bottom_right;
-  float x, y;
+  guchar *mask_data;
+  guint tex_width, tex_height;
+  CoglHandle paint_tex, mask_texture;
+  int i;
+  int n_rects;
+  int stride;
 
-  /* need these to build a path */
-  cairo_t *cr;
-  cairo_surface_t *surface;
+  paint_tex = meta_shaped_texture_get_texture (META_SHAPED_TEXTURE (priv->actor));
+  if (paint_tex == COGL_INVALID_HANDLE)
+    return;
 
-  if (!priv->window->frame)
+  tex_width = cogl_texture_get_width (paint_tex);
+  tex_height = cogl_texture_get_height (paint_tex);
+
+  stride = cairo_format_stride_for_width (CAIRO_FORMAT_A8, tex_width);
+
+  /* Create data for an empty image */
+  mask_data = g_malloc0 (stride * tex_height);
+
+  n_rects = cairo_region_num_rectangles (shape_region);
+
+  /* Fill in each rectangle. */
+  for (i = 0; i < n_rects; i ++)
     {
-      meta_shaped_texture_set_overlay_path (META_SHAPED_TEXTURE (priv->actor),
-                                            NULL, NULL);
-      return;
+      cairo_rectangle_int_t rect;
+      cairo_region_get_rectangle (shape_region, i, &rect);
+
+      gint x1 = rect.x, x2 = x1 + rect.width;
+      gint y1 = rect.y, y2 = y1 + rect.height;
+      guchar *p;
+
+      /* Clip the rectangle to the size of the texture */
+      x1 = CLAMP (x1, 0, (gint) tex_width - 1);
+      x2 = CLAMP (x2, x1, (gint) tex_width);
+      y1 = CLAMP (y1, 0, (gint) tex_height - 1);
+      y2 = CLAMP (y2, y1, (gint) tex_height);
+
+      /* Fill the rectangle */
+      for (p = mask_data + y1 * stride + x1;
+           y1 < y2;
+           y1++, p += stride)
+        memset (p, 255, x2 - x1);
     }
 
-  meta_window_get_outer_rect (priv->window, &outer);
+  if (meta_texture_rectangle_check (paint_tex))
+    {
+      mask_texture = meta_texture_rectangle_new (tex_width, tex_height,
+                                                 COGL_PIXEL_FORMAT_A_8,
+                                                 COGL_PIXEL_FORMAT_A_8,
+                                                 stride,
+                                                 mask_data);
+    }
+  else
+    {
+      /* Note: we don't allow slicing for this texture because we
+       * need to use it with multi-texturing which doesn't support
+       * sliced textures */
+      mask_texture = cogl_texture_new_from_data (tex_width, tex_height,
+                                                 COGL_TEXTURE_NO_SLICING,
+                                                 COGL_PIXEL_FORMAT_A_8,
+                                                 COGL_PIXEL_FORMAT_ANY,
+                                                 stride,
+                                                 mask_data);
+    }
 
-  meta_frame_get_corner_radiuses (priv->window->frame,
-                                  &top_left,
-                                  &top_right,
-                                  &bottom_left,
-                                  &bottom_right);
+  meta_shaped_texture_set_mask_texture (META_SHAPED_TEXTURE (priv->actor),
+                                        mask_texture);
+  cogl_handle_unref (mask_texture);
 
-  /* Unfortunately, cairo does not allow us to create a context
-   * without a surface. Create a 0x0 image surface to "paint to"
-   * so we can get the path. */
-  surface = cairo_image_surface_create (CAIRO_FORMAT_A8,
-                                        0, 0);
-
-  cr = cairo_create (surface);
-
-  /* top left */
-  x = borders->invisible.left;
-  y = borders->invisible.top;
-
-  set_integral_bounding_rect (&corner_rects[0],
-                              x, y, top_left, top_left);
-
-  cairo_arc (cr,
-             x + top_left,
-             y + top_left,
-             top_left,
-             0, M_PI*2);
-
-
-  /* top right */
-  x = borders->invisible.left + outer.width - top_right;
-  y = borders->invisible.top;
-
-  set_integral_bounding_rect (&corner_rects[1],
-                              x, y, top_right, top_right);
-
-  cairo_arc (cr,
-             x,
-             y + top_right,
-             top_right,
-             0, M_PI*2);
-
-  /* bottom right */
-  x = borders->invisible.left + outer.width - bottom_right;
-  y = borders->invisible.top + outer.height - bottom_right;
-
-  set_integral_bounding_rect (&corner_rects[2],
-                              x, y, bottom_right, bottom_right);
-
-  cairo_arc (cr,
-             x,
-             y,
-             bottom_right,
-             0, M_PI*2);
-
-  /* bottom left */
-  x = borders->invisible.left;
-  y = borders->invisible.top + outer.height - bottom_left;
-
-  set_integral_bounding_rect (&corner_rects[3],
-                              x, y, bottom_left, bottom_left);
-
-  cairo_arc (cr,
-             x + bottom_left,
-             y,
-             bottom_left,
-             0, M_PI*2);
-
-  corner_path = cairo_copy_path (cr);
-
-  cairo_surface_destroy (surface);
-  cairo_destroy (cr);
-
-  corner_region = cairo_region_create_rectangles (corner_rects, 4);
-
-  meta_shaped_texture_set_overlay_path (META_SHAPED_TEXTURE (priv->actor),
-                                        corner_region, corner_path);
-
-  cairo_region_destroy (corner_region);
-
+  g_free (mask_data);
 }
 
 static void
@@ -2269,7 +2232,7 @@ check_needs_reshape (MetaWindowActor *self)
   if (!priv->needs_reshape)
     return;
 
-  meta_shaped_texture_set_shape_region (META_SHAPED_TEXTURE (priv->actor), NULL);
+  meta_shaped_texture_set_mask_texture (META_SHAPED_TEXTURE (priv->actor), COGL_INVALID_HANDLE);
   meta_window_actor_clear_shape_region (self);
 
   meta_frame_calc_borders (priv->window->frame, &borders);
@@ -2329,14 +2292,10 @@ check_needs_reshape (MetaWindowActor *self)
     }
 #endif
 
-  meta_shaped_texture_set_shape_region (META_SHAPED_TEXTURE (priv->actor),
-                                        region);
-
+  generate_mask (self, &borders, region);
   meta_window_actor_update_shape_region (self, region);
 
   cairo_region_destroy (region);
-
-  update_corners (self, &borders);
 
   priv->needs_reshape = FALSE;
   meta_window_actor_invalidate_shadow (self);
