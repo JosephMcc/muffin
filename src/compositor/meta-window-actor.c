@@ -2279,13 +2279,14 @@ build_and_scan_frame_mask (MetaWindowActor       *self,
   cairo_t *cr;
   cairo_surface_t *surface;
 
+  g_printerr ("one\n");
   paint_tex = meta_shaped_texture_get_texture (META_SHAPED_TEXTURE (priv->actor));
   if (paint_tex == COGL_INVALID_HANDLE)
     return;
-
+  g_printerr ("two\n");
   tex_width = cogl_texture_get_width (paint_tex);
   tex_height = cogl_texture_get_height (paint_tex);
-
+  g_printerr ("three\n");
   stride = cairo_format_stride_for_width (CAIRO_FORMAT_A8, tex_width);
 
   /* Create data for an empty image */
@@ -2300,7 +2301,7 @@ build_and_scan_frame_mask (MetaWindowActor       *self,
 
   gdk_cairo_region (cr, shape_region);
   cairo_fill (cr);
-
+  g_printerr ("four\n");
   if (priv->window->frame != NULL)
     {
       cairo_region_t *frame_paint_region, *scanned_region;
@@ -2320,7 +2321,7 @@ build_and_scan_frame_mask (MetaWindowActor       *self,
       cairo_region_union (shape_region, scanned_region);
       cairo_region_destroy (scanned_region);
     }
-
+  g_printerr ("five\n");
   cairo_destroy (cr);
   cairo_surface_destroy (surface);
 
@@ -2338,17 +2339,18 @@ build_and_scan_frame_mask (MetaWindowActor       *self,
        * need to use it with multi-texturing which doesn't support
        * sliced textures */
       mask_texture = cogl_texture_new_from_data (tex_width, tex_height,
-                                                 COGL_TEXTURE_NO_SLICING,
-                                                 COGL_PIXEL_FORMAT_A_8,
-                                                 COGL_PIXEL_FORMAT_ANY,
-                                                 stride,
-                                                 mask_data);
+                                                              COGL_TEXTURE_NO_SLICING,
+                                                              COGL_PIXEL_FORMAT_A_8,
+                                                              COGL_PIXEL_FORMAT_ANY,
+                                                              stride,
+                                                              mask_data);
     }
-
+  g_printerr ("six\n");
   meta_shaped_texture_set_mask_texture (META_SHAPED_TEXTURE (priv->actor),
                                         mask_texture);
+  g_printerr ("nine\n");
   cogl_handle_unref (mask_texture);
-
+  g_printerr ("ten\n");
   g_free (mask_data);
 }
 
@@ -2422,7 +2424,9 @@ check_needs_reshape (MetaWindowActor *self)
    * adding it to region.
    */
   build_and_scan_frame_mask (self, &borders, &client_area, region);
+  g_printerr ("seven\n");
   meta_window_actor_update_shape_region (self, region);
+  g_printerr ("eight\n");
 
   cairo_region_destroy (region);
 

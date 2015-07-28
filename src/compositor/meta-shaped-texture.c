@@ -36,7 +36,6 @@
 
 #include <meta/meta-shaped-texture.h>
 #include "meta-texture-tower.h"
-#include "cogl-utils.h"
 
 #include <clutter/clutter.h>
 #include <cogl/cogl.h>

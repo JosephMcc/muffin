@@ -31,7 +31,6 @@
 
 #include "meta-texture-tower.h"
 #include "meta-texture-rectangle.h"
-#include "cogl-utils.h"
 
 #ifndef M_LOG2E
 #define M_LOG2E 1.4426950408889634074
@@ -375,7 +374,7 @@ texture_tower_create_texture (MetaTextureTower *tower,
     }
   else
     {
-      tower->textures[level] = meta_cogl_texture_new_with_size_wrapper (width, height,
+      tower->textures[level] = cogl_texture_new_with_size (width, height,
                                                                         COGL_TEXTURE_NO_AUTO_MIPMAP,
                                                                         TEXTURE_FORMAT);
     }

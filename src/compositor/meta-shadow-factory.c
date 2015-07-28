@@ -794,7 +794,7 @@ make_shadow (MetaShadow     *shadow,
    * in the case of top_fade >= 0. We also account for padding at the left for symmetry
    * though that doesn't currently occur.
    */
-  shadow->texture = meta_cogl_texture_new_from_data_wrapper (shadow->outer_border_left + extents.width + shadow->outer_border_right,
+  shadow->texture = cogl_texture_new_from_data (shadow->outer_border_left + extents.width + shadow->outer_border_right,
                                                              shadow->outer_border_top + extents.height + shadow->outer_border_bottom,
                                                              COGL_TEXTURE_NONE,
                                                              COGL_PIXEL_FORMAT_A_8,

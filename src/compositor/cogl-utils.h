@@ -23,9 +23,6 @@
 #ifndef __META_COGL_UTILS_H__
 #define __META_COGL_UTILS_H__
 
-#define COGL_ENABLE_EXPERIMENTAL_API
-#define CLUTTER_ENABLE_EXPERIMENTAL_API
-
 #include <cogl/cogl.h>
 #include <clutter/clutter.h>
 
@@ -35,22 +32,5 @@ CoglHandle meta_create_color_texture_4ub (guint8           red,
                                           guint8           alpha,
                                           CoglTextureFlags flags);
 CoglHandle meta_create_texture_material  (CoglHandle src_texture);
-
-CoglTexture * meta_cogl_texture_new_from_data_wrapper                (int  width,
-                                                                      int  height,
-                                                         CoglTextureFlags  flags,
-                                                          CoglPixelFormat  format,
-                                                          CoglPixelFormat  internal_format,
-                                                                      int  rowstride,
-                                                            const uint8_t *data);
-
-CoglTexture * meta_cogl_texture_new_from_file_wrapper         (const char *filename,
-                                                         CoglTextureFlags  flags,
-                                                          CoglPixelFormat  internal_format);
-
-CoglTexture * meta_cogl_texture_new_with_size_wrapper                (int  width,
-                                                                      int  height,
-                                                         CoglTextureFlags  flags,
-                                                          CoglPixelFormat  internal_format);
 
 #endif /* __META_COGL_UTILS_H__ */
