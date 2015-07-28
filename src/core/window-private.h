@@ -558,22 +558,8 @@ void        meta_window_unmaximize_with_gravity (MetaWindow        *window,
                                                  int                new_width,
                                                  int                new_height,
                                                  int                gravity);
-void        meta_window_make_above         (MetaWindow  *window);
-void        meta_window_unmake_above       (MetaWindow  *window);
-void        meta_window_shade              (MetaWindow  *window,
-                                            guint32      timestamp);
-void        meta_window_unshade            (MetaWindow  *window,
-                                            guint32      timestamp);
-void        meta_window_adjust_opacity     (MetaWindow  *window,
-                                            gboolean     increase);
-void        meta_window_change_workspace   (MetaWindow  *window,
-                                            MetaWorkspace *workspace);
-void        meta_window_stick              (MetaWindow  *window);
-void        meta_window_unstick            (MetaWindow  *window);
 
 void        meta_window_make_fullscreen_internal (MetaWindow    *window);
-void        meta_window_make_fullscreen    (MetaWindow  *window);
-void        meta_window_unmake_fullscreen  (MetaWindow  *window);
 void        meta_window_update_fullscreen_monitors (MetaWindow    *window,
                                                     unsigned long  top,
                                                     unsigned long  bottom,
@@ -600,7 +586,8 @@ void        meta_window_resize_with_gravity (MetaWindow  *window,
                                              int          w,
                                              int          h,
                                              int          gravity);
-
+void        meta_window_change_workspace   (MetaWindow  *window,
+                                            MetaWorkspace *workspace);
 
 /* Return whether the window should be currently mapped */
 gboolean    meta_window_should_be_showing   (MetaWindow  *window);
@@ -638,10 +625,6 @@ void        meta_window_get_geometry         (MetaWindow  *window,
                                               int         *y,
                                               int         *width,
                                               int         *height);
-
-void        meta_window_kill               (MetaWindow  *window);
-void        meta_window_focus              (MetaWindow  *window,
-                                            guint32      timestamp);
 
 void        meta_window_update_unfocused_button_grabs (MetaWindow *window);
 
@@ -731,12 +714,6 @@ gboolean meta_window_same_application (MetaWindow *window,
 void meta_window_refresh_resize_popup (MetaWindow *window);
 
 void meta_window_free_delete_dialog (MetaWindow *window);
-
-
-void meta_window_begin_grab_op (MetaWindow *window,
-                                MetaGrabOp  op,
-                                gboolean    frame_action,
-                                guint32     timestamp);
 
 void meta_window_update_keyboard_resize (MetaWindow *window,
                                          gboolean    update_cursor);
