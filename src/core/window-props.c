@@ -78,77 +78,41 @@ static void reload_prop_value          (MetaWindow          *window,
 static MetaWindowPropHooks* find_hooks (MetaDisplay *display,
                                         Atom         property);
 
+void
+meta_window_reload_property_from_xwindow (MetaWindow      *window,
+                                          Window           xwindow,
+                                          Atom             property,
+                                          gboolean         initial)
+{
+  MetaPropValue value = { 0, };
+  MetaWindowPropHooks *hooks;
 
-LOCAL_SYMBOL void
+  hooks = find_hooks (window->display, property);
+  if (!hooks)
+    return;
+
+  init_prop_value (window, hooks, &value);
+
+  meta_prop_get_values (window->display, xwindow,
+                        &value, 1);
+
+  reload_prop_value (window, hooks, &value,
+                     initial);
+
+  meta_prop_free_values (&value, 1);
+}
+
+static void
 meta_window_reload_property (MetaWindow *window,
                              Atom        property,
                              gboolean    initial)
 {
-  meta_window_reload_properties (window, &property, 1, initial);
+  meta_window_reload_property_from_xwindow (window,
+                                            window->xwindow,
+                                            property,
+                                            initial);
 }
 
-LOCAL_SYMBOL void
-meta_window_reload_properties (MetaWindow *window,
-                               const Atom *properties,
-                               int         n_properties,
-                               gboolean    initial)
-{
-  meta_window_reload_properties_from_xwindow (window,
-                                              window->xwindow,
-                                              properties,
-                                              n_properties,
-                                              initial);
-}
-
-LOCAL_SYMBOL void
-meta_window_reload_property_from_xwindow (MetaWindow *window,
-                                          Window      xwindow,
-                                          Atom        property,
-                                          gboolean    initial)
-{
-  meta_window_reload_properties_from_xwindow (window, xwindow, &property, 1,
-                                              initial);
-}
-
-LOCAL_SYMBOL void
-meta_window_reload_properties_from_xwindow (MetaWindow *window,
-                                            Window      xwindow,
-                                            const Atom *properties,
-                                            int         n_properties,
-                                            gboolean    initial)
-{
-  int i;
-  MetaPropValue *values;
-
-  g_return_if_fail (properties != NULL);
-  g_return_if_fail (n_properties > 0);
-  
-  values = g_new0 (MetaPropValue, n_properties);
-  
-  i = 0;
-  while (i < n_properties)
-    {
-      MetaWindowPropHooks *hooks = find_hooks (window->display, properties[i]);
-      init_prop_value (window, hooks, &values[i]);
-      ++i;
-    }
-  
-  meta_prop_get_values (window->display, xwindow,
-                        values, n_properties);
-
-  i = 0;
-  while (i < n_properties)
-    {
-      MetaWindowPropHooks *hooks = find_hooks (window->display, properties[i]);
-      reload_prop_value (window, hooks, &values[i], initial);
-      
-      ++i;
-    }
-
-  meta_prop_free_values (values, n_properties);
-  
-  g_free (values);
-}
 
 LOCAL_SYMBOL void
 meta_window_load_initial_properties (MetaWindow *window)
