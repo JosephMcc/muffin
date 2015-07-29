@@ -688,7 +688,11 @@ meta_show_dialog (const char *type,
       gchar *env = g_strdup_printf("%d", transient_for);
       setenv ("WINDOWID", env, 1);
       g_free (env);
+
+      append_argument (args, "--modal");
     }
+
+  g_ptr_array_add (args, NULL); /*NULL-terminate */  
 
   g_spawn_async (
                  "/",
