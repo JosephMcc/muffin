@@ -41,6 +41,8 @@ static void     meta_preview_size_allocate (GtkWidget        *widget,
                                             GtkAllocation    *allocation);
 static gboolean meta_preview_draw          (GtkWidget        *widget,
                                             cairo_t          *cr);
+static void     meta_preview_realize       (GtkWidget        *widget);
+static void     meta_preview_dispose       (GObject          *object);
 static void     meta_preview_finalize      (GObject          *object);
 
 G_DEFINE_TYPE (MetaPreview, meta_preview, GTK_TYPE_BIN);
@@ -53,8 +55,10 @@ meta_preview_class_init (MetaPreviewClass *class)
 
   widget_class = (GtkWidgetClass*) class;
 
+  gobject_class->dispose = meta_preview_dispose;
   gobject_class->finalize = meta_preview_finalize;
 
+  widget_class->realize = meta_preview_realize;
   widget_class->draw = meta_preview_draw;
   widget_class->get_preferred_width = meta_preview_get_preferred_width;
   widget_class->get_preferred_height = meta_preview_get_preferred_height;
@@ -107,6 +111,16 @@ meta_preview_new (void)
   preview = g_object_new (META_TYPE_PREVIEW, NULL);
   
   return GTK_WIDGET (preview);
+}
+
+static void
+meta_preview_dispose (GObject *object)
+{
+  MetaPreview *preview = META_PREVIEW (object);
+
+  g_clear_object (&preview->style_context);
+
+  G_OBJECT_CLASS (meta_preview_parent_class)->dispose (object);
 }
 
 static void
@@ -214,7 +228,7 @@ meta_preview_draw (GtkWidget *widget,
         client_height = 1;  
       
       meta_theme_draw_frame (preview->theme,
-                             gtk_widget_get_style_context (widget),
+                             preview->style_context,
                              cr,
                              preview->type,
                              preview->flags,
@@ -231,6 +245,17 @@ meta_preview_draw (GtkWidget *widget,
 
   /* draw child */
   return GTK_WIDGET_CLASS (meta_preview_parent_class)->draw (widget, cr);
+}
+
+static void
+meta_preview_realize (GtkWidget *widget)
+{
+  MetaPreview *preview = META_PREVIEW (widget);
+
+  GTK_WIDGET_CLASS (meta_preview_parent_class)->realize (widget);
+
+  preview->style_context = meta_theme_create_style_context (gtk_widget_get_screen (widget),
+                                                            NULL);
 }
 
 #define NO_CHILD_WIDTH 80

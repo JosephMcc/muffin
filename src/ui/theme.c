@@ -5513,6 +5513,37 @@ meta_theme_get_title_scale (MetaTheme     *theme,
   return style->layout->title_scale;
 }
 
+GtkStyleContext *
+meta_theme_create_style_context (GdkScreen   *screen,
+                                 const gchar *variant)
+{
+  GtkWidgetPath *path;
+  GtkStyleContext *style;
+  char *theme_name;
+
+  g_object_get (gtk_settings_get_for_screen (screen),
+                "gtk-theme-name", &theme_name,
+                NULL);
+
+  style = gtk_style_context_new ();
+  path = gtk_widget_path_new ();
+  gtk_widget_path_append_type (path, META_TYPE_FRAMES);
+  gtk_style_context_set_path (style, path);
+  gtk_widget_path_unref (path);
+
+  if (theme_name && *theme_name)
+    {
+      GtkCssProvider *provider;
+
+      provider = gtk_css_provider_get_named (theme_name, variant);
+      gtk_style_context_add_provider (style,
+                                      GTK_STYLE_PROVIDER (provider),
+                                      GTK_STYLE_PROVIDER_PRIORITY_SETTINGS);
+    }
+
+  return style;
+}
+
 LOCAL_SYMBOL void
 meta_theme_draw_frame (MetaTheme              *theme,
                        GtkStyleContext        *style_gtk,
