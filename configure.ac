@@ -85,7 +85,7 @@ MUFFIN_PC_MODULES="
    cairo >= 1.10.0
    cinnamon-desktop >= 2.4.0
    xcomposite >= 0.3 xfixes xrender xdamage
-   $CLUTTER_PACKAGE >= 1.10.0
+   $CLUTTER_PACKAGE >= 1.13.2
    cogl-1.0 >= 1.9.6
    gl
 "
