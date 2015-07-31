@@ -201,7 +201,7 @@ void        meta_window_kill               (MetaWindow  *window);
 void        meta_window_focus              (MetaWindow  *window,
                                             guint32      timestamp);
 
-void        meta_window_check_alive        (MetaWindow   window,
+void        meta_window_check_alive        (MetaWindow   *window,
                                             guint32      timestamp);
 
 void meta_window_begin_grab_op (MetaWindow *window,
