@@ -1611,7 +1611,7 @@ button_layout_handler (GVariant *value,
       g_strfreev (buttons);
     }
 
-  for (; i < MAX_BUTTONS_PER_CORNER, i++)
+  for (; i < MAX_BUTTONS_PER_CORNER; i++)
     {
       new_layout.left_buttons[i] = META_BUTTON_FUNCTION_LAST;
       new_layout.left_buttons_has_spacer[i] = FALSE;

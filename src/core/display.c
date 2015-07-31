@@ -755,7 +755,7 @@ meta_display_open (void)
       {
         int xfixes_major, xfixes_minor;
 
-        XFixesQueryVersion (the_display->display, &xfixes_major, &xfixes_minor);
+        XFixesQueryVersion (the_display->xdisplay, &xfixes_major, &xfixes_minor);
 
         if (xfixes_major * 100 + xfixes_minor < 500)
           meta_fatal ("Muffin requires XFixes 5.0");
