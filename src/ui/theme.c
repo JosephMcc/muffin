@@ -55,6 +55,7 @@
 
 #include <config.h>
 #include "theme-private.h"
+#include "frames.h" /* for META_TYPE_FRAMES */
 #include <meta/util.h>
 #include <meta/gradient.h>
 #include <meta/prefs.h>
@@ -5547,7 +5548,7 @@ meta_theme_create_style_context (GdkScreen   *screen,
   return style;
 }
 
-LOCAL_SYMBOL void
+void
 meta_theme_draw_frame (MetaTheme              *theme,
                        GtkStyleContext        *style_gtk,
                        cairo_t                *cr,
