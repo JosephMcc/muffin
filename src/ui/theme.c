@@ -5541,6 +5541,8 @@ meta_theme_create_style_context (GdkScreen   *screen,
                                       GTK_STYLE_PROVIDER_PRIORITY_SETTINGS);
     }
 
+  g_free (theme_name);
+
   return style;
 }
 
