@@ -92,6 +92,12 @@ enum {
 
 #define NUMBER_OF_QUEUES 3
 
+typdef enum {
+  _NET_WM_BYPASS_COMPOSITOR_HINT_AUTO = 0,
+  _NET_WM_BYPASS_COMPOSITOR_HINT_ON = 1,
+  _NET_WM_BYPASS_COMPOSITOR_HINT_OFF = 2,
+} MetaBypassCompositorHintValue:
+
 #define HUD_WIDTH 24
 #define CSD_TITLEBAR_HEIGHT 48
 
@@ -473,8 +479,7 @@ struct _MetaWindow
   MetaWindow *tile_match;
 
   /* Bypass compositor hints */
-  guint bypass_compositor : 1;
-  guint dont_bypass_compositor : 1;
+  guint bypass_compositor;
 };
 
 struct _MetaWindowClass
