@@ -2213,6 +2213,9 @@ check_needs_reshape (MetaWindowActor *self)
   cairo_rectangle_int_t client_area;
   gboolean needs_mask;
 
+  if (!priv->mapped)
+    return;
+  
   if (!priv->needs_reshape)
     return;
 
