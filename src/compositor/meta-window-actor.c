@@ -76,6 +76,9 @@ struct _MetaWindowActorPrivate
 
   /* A region that matches the shape of the window, including frame bounds */
   cairo_region_t   *shape_region;
+  /* The opaque region, from _NET_WM_OPAQUE_REGION, intersected with
+   * the shape region. */
+  cairo_region_t   *opaque_region;
   /* The region we should clip to when painting the shadow */
   cairo_region_t   *shadow_clip;
 
@@ -442,6 +445,7 @@ meta_window_actor_dispose (GObject *object)
   meta_window_actor_detach (self);
 
   g_clear_pointer (&priv->shape_region, cairo_region_destroy);
+  g_clear_pointer (&priv->opaque_region, cairo_region_destroy);
   g_clear_pointer (&priv->shadow_clip, cairo_region_destroy);
 
   g_clear_pointer (&priv->shadow_class, g_free);
@@ -1649,8 +1653,8 @@ meta_window_actor_get_obscured_region (MetaWindowActor *self)
 {
   MetaWindowActorPrivate *priv = self->priv;
 
-  if (!priv->argb32 && priv->opacity == 0xff && priv->back_pixmap)
-    return priv->shape_region;
+  if (priv->back_pixmap && priv->opacity == 0xff)
+    return priv->opaque_region;
   else
     return NULL;
 }
@@ -2277,6 +2281,30 @@ check_needs_reshape (MetaWindowActor *self)
       region = cairo_region_create_rectangle (&client_area);
     }
 
+  /* The region at this point should be constrained to the
+   * bounds of the client rectangle. */
+
+  if (priv->argb32 && priv->window->opaque_region != NULL)
+    {
+      /* The opaque region is defined to be a part of the
+       * window which ARGB32 will always paint with opaque
+       * pixels. For these regions, we want to avoid painting
+       * windows and shadows beneath them.
+       *
+       * If the client gives bad coordinates where it does not
+       * fully paint, the behavior is defined by the specification
+       * to be undefined, and considered a client bug. In mutter's
+       * case, graphical glitches will occur.
+       */
+      priv->opaque_region = cairo_region_copy (priv->window->opaque_region);
+      cairo_region_translate (priv->opaque_region, client_area.x, client_area.y);
+      cairo_region_intersect (priv->opaque_region, region);
+    }
+  else if (priv->argb32)
+    priv->opaque_region = NULL;
+  else
+    priv->opaque_region = cairo_region_reference (region);
+
   if (needs_mask)
     {
       /* This takes the region, generates a mask using GTK+
@@ -2286,8 +2314,7 @@ check_needs_reshape (MetaWindowActor *self)
       build_and_scan_frame_mask (self, &borders, &client_area, region);
     }
 
-  /* The region at this point should be constrained to the
-   * bounds of the client rectangle. */
+
 
   priv->shape_region = region;
 
