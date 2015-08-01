@@ -770,5 +770,6 @@ MetaWindowTileType  meta_window_get_tile_type (MetaWindow *window);
 
 gboolean meta_window_is_client_decorated (MetaWindow *window);
 
+gboolean meta_window_updates_are_frozen (MetaWindow *window);
 
 #endif
