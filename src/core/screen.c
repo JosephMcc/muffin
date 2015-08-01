@@ -1317,7 +1317,9 @@ meta_screen_foreach_window (MetaScreen *screen,
         {
           MetaWindow *window = tmp->data;
 
-          if (window->screen == screen && !window->override_redirect)
+          if (META_IS_WINDOW (window) &&
+              window->screen == screen &&
+              !window->override_redirect)
             (* func) (screen, window, data);
         }
       
