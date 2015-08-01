@@ -2443,7 +2443,7 @@ meta_window_actor_update_opacity (MetaWindowActor *self)
 
 void
 meta_window_actor_set_updates_frozen (MetaWindowActor *self,
-                                      gboolena         updates_frozen)
+                                      gboolean         updates_frozen)
 {
   MetaWindowActorPrivate *priv = self->priv;
 
