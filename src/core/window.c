@@ -9968,12 +9968,14 @@ update_tile_mode (MetaWindow *window)
     }
 }
 
-LOCAL_SYMBOL void
-meta_window_handle_mouse_grab_op_event (MetaWindow *window,
-                                        XEvent     *event)
+ifdef HAVE_XSYNC
+void
+meta_window_update_sync_request_counter (MetaWindow *window,
+                                         guint64     new_counter_value)
 {
-#ifdef HAVE_XSYNC
-  if (event->type == (window->display->xsync_event_base + XSyncAlarmNotify))
+  if (window->display->grab_op != META_GRAB_OP_NONE &&
+      window == window->display->grab_window &&
+      meta_grab_op_is_mouse (window->display->grab_op))
     {
       meta_topic (META_DEBUG_RESIZING,
                   "Alarm event received last motion x = %d y = %d\n",
@@ -10020,8 +10022,13 @@ meta_window_handle_mouse_grab_op_event (MetaWindow *window,
           break;
         }
     }
+}
 #endif /* HAVE_XSYNC */
 
+void
+meta_window_handle_mouse_grab_op_event (MetaWindow *window,
+                                        XEvent     *event)
+{
   switch (event->type)
     {
     case ButtonRelease:
@@ -10040,13 +10047,14 @@ meta_window_handle_mouse_grab_op_event (MetaWindow *window,
               if (window->tile_mode != META_TILE_NONE &&
                   meta_window_mouse_on_edge (window,
                                              event->xbutton.x_root,
-                                             event->xbutton.y_root)) {
+                                             event->xbutton.y_root)) 
+                {
                   window->custom_snap_size = FALSE;
                   if (window->tile_mode == META_TILE_MAXIMIZE)
                     meta_window_maximize(window, META_MAXIMIZE_VERTICAL | META_MAXIMIZE_HORIZONTAL);
                   else
                     meta_window_real_tile (window, FALSE);
-              }
+                }
               else if (event->xbutton.root == window->screen->xroot)
                   update_move (window,
                                event->xbutton.state & ShiftMask,
@@ -10118,6 +10126,7 @@ meta_window_handle_mouse_grab_op_event (MetaWindow *window,
       break;
     }
 }
+
 
 LOCAL_SYMBOL void
 meta_window_handle_keyboard_grab_op_event (MetaWindow *window,

@@ -1273,8 +1273,8 @@ grab_op_is_mouse_only (MetaGrabOp op)
     }
 }
 
-static gboolean
-grab_op_is_mouse (MetaGrabOp op)
+gboolean
+meta_grab_op_is_mouse (MetaGrabOp op)
 {
   switch (op)
     {
@@ -2006,7 +2006,7 @@ event_callback (XEvent   *event,
             break;
 
           if ((window &&
-               grab_op_is_mouse (display->grab_op) &&
+               meta_grab_op_is_mouse (display->grab_op) &&
                display->grab_button != (int) event->xbutton.button &&
                display->grab_window == window) ||
               grab_op_is_keyboard (display->grab_op))
@@ -2201,7 +2201,7 @@ event_callback (XEvent   *event,
           display->overlay_key_only_pressed = FALSE;
 
           if (display->grab_window == window &&
-              grab_op_is_mouse (display->grab_op))
+              meta_grab_op_is_mouse (display->grab_op))
             meta_window_handle_mouse_grab_op_event (window, event);
           break;
         case MotionNotify:
@@ -2209,7 +2209,7 @@ event_callback (XEvent   *event,
             break;
 
           if (display->grab_window == window &&
-              grab_op_is_mouse (display->grab_op))
+              meta_grab_op_is_mouse (display->grab_op))
             meta_window_handle_mouse_grab_op_event (window, event);
           break;
         case EnterNotify:
