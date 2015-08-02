@@ -16,7 +16,6 @@
 #include <X11/extensions/Xrender.h>
 
 #include <clutter/x11/clutter-x11.h>
-#define COGL_ENABLE_EXPERIMENTAL_API
 #include <cogl/cogl-texture-pixmap-x11.h>
 #include <gdk/gdk.h> /* for gdk_rectangle_union() */
 #include <string.h>
@@ -2215,7 +2214,8 @@ generate_mask (MetaWindowActor  *self,
 
   meta_shaped_texture_set_mask_texture (META_SHAPED_TEXTURE (priv->actor),
                                         mask_texture);
-  cogl_handle_unref (mask_texture);
+  if (mask_texture)
+    cogl_handle_unref (mask_texture);
 
   g_free (mask_data);
 }
