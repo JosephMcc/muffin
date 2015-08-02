@@ -72,7 +72,7 @@ static void invoke_handler_by_name (MetaDisplay    *display,
                                     MetaScreen     *screen,
                                     const char     *handler_name,
                                     MetaWindow     *window,
-                                    XEvent         *event);
+                                    XIDeviceEvent  *event);
 
 enum {
   META_MOVE_TO_XCHANGE_FLAG = 8, // 1000
@@ -141,23 +141,23 @@ meta_key_binding_get_mask (MetaKeyBinding *binding)
  * handler functions and have some kind of flag to say they're unbindable.
  */
 
-static gboolean process_mouse_move_resize_grab (MetaDisplay *display,
-                                                MetaScreen  *screen,
-                                                MetaWindow  *window,
-                                                XEvent      *event,
-                                                KeySym       keysym);
+static gboolean process_mouse_move_resize_grab (MetaDisplay   *display,
+                                                MetaScreen    *screen,
+                                                MetaWindow    *window,
+                                                XIDeviceEvent *event,
+                                                KeySym         keysym);
 
-static gboolean process_keyboard_move_grab (MetaDisplay *display,
-                                            MetaScreen  *screen,
-                                            MetaWindow  *window,
-                                            XEvent      *event,
-                                            KeySym       keysym);
+static gboolean process_keyboard_move_grab (MetaDisplay   *display,
+                                            MetaScreen    *screen,
+                                            MetaWindow    *window,
+                                            XIDeviceEvent *event,
+                                            KeySym         keysym);
 
-static gboolean process_keyboard_resize_grab (MetaDisplay *display,
-                                              MetaScreen  *screen,
-                                              MetaWindow  *window,
-                                              XEvent      *event,
-                                              KeySym       keysym);
+static gboolean process_keyboard_resize_grab (MetaDisplay   *display,
+                                              MetaScreen    *screen,
+                                              MetaWindow    *window,
+                                              XIDeviceEvent *event,
+                                              KeySym         keysym);
 
 static void regrab_key_bindings         (MetaDisplay *display);
 
