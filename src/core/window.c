@@ -221,8 +221,18 @@ prefs_changed_callback (MetaPreference pref,
 {
   MetaWindow *window = data;
 
-  if (pref != META_PREF_WORKSPACES_ONLY_ON_PRIMARY)
-    return;
+  if (pref == META_PREF_WORKSPACES_ONLY_ON_PRIMARY)
+    {
+      meta_window_update_on_all_workspaces (window);
+      meta_window_queue (window, META_QUEUE_CALC_SHOWING);
+    }
+  else if (pref == META_PREF_ATTACH_MODAL_DIALOGS &&
+           window->type == META_WINDOW_MODAL_DIALOG)
+    {
+      window->attached = meta_window_should_attach_to_parent (window);
+      recalc_window_features (window);
+      meta_window_queue (window, META_QUEUE_MOVE_RESIZE);
+    }
 
   meta_window_update_on_all_workspaces (window);
 
