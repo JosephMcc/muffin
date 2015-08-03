@@ -487,7 +487,7 @@ meta_background_actor_new_for_screen (MetaScreen *screen)
   priv->background = meta_screen_background_get (screen);
   priv->background->actors = g_slist_prepend (priv->background->actors, self);
 
-  priv->material = meta_create_texture_material (NULL);
+  priv->material = meta_create_texture_pipeline (NULL);
 
   set_texture_on_actor (self);
   update_wrap_mode_of_actor (self);
