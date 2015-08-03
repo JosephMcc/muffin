@@ -6000,6 +6000,9 @@ meta_window_change_workspace (MetaWindow    *window,
 {
   g_return_if_fail (!window->override_redirect);
 
+  if (window->always_sticky)
+    return;
+
   meta_window_change_workspace_without_transients (window, workspace);
 
   meta_window_foreach_transient (window, change_workspace_foreach,
