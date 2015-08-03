@@ -116,6 +116,7 @@ static gboolean resize_with_right_button = FALSE;
 static gboolean edge_tiling = FALSE;
 static gboolean force_fullscreen = TRUE;
 static unsigned int snap_modifier[2];
+static gboolean ignore_request_hide_titlebar = FALSE;
 
 static CDesktopVisualBellType visual_bell_type = C_DESKTOP_VISUAL_BELL_FULLSCREEN_FLASH;
 static MetaButtonLayout button_layout;
@@ -2501,4 +2502,16 @@ gint
 meta_prefs_get_ui_scale (void)
 {
   return ui_scale;
+}
+
+gboolean
+meta_prefs_get_ignore_request_hide_titlebar (void)
+{
+  return ignore_request_hide_titlebar;
+}
+
+void
+meta_prefs_set_ignore_request_hide_titlebar (gboolean whether)
+{
+  ignore_request_hide_titlebar = whether;
 }

@@ -145,6 +145,9 @@ gboolean meta_prefs_get_workspaces_only_on_primary (void);
 
 int      meta_prefs_get_draggable_border_width (void);
 
+gboolean meta_prefs_get_ignore_request_hide_titlebar (void);
+void     meta_prefs_set_ignore_request_hide_titlebar (gboolean whether);
+
 int      meta_prefs_get_tile_hud_threshold (void);
 int      meta_prefs_get_resize_threshold (void);
 
