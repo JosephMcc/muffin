@@ -4698,6 +4698,9 @@ meta_window_update_for_monitors_changed (MetaWindow *window)
   const MetaMonitorInfo *old, *new;
   int i;
 
+  if (window->type == META_WINDOW_DESKTOP)
+    return;
+
   old = window->monitor;
 
   /* Start on primary */
