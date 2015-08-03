@@ -139,7 +139,7 @@ place_in_center (MetaWindow *window,
   int center_x, center_y;
   const MetaMonitorInfo *xi;
 
-  xi = meta_screen_get_current_monitor (window->screen);
+  xi = meta_screen_get_current_monitor_info (window->screen);
   center_x = *new_x + xi->rect.width / 2;
   center_y = *new_y + xi->rect.height / 2;
 
