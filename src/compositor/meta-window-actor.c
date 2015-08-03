@@ -2362,7 +2362,7 @@ check_needs_reshape (MetaWindowActor *self)
   MetaFrameBorders borders;
   cairo_region_t *region = NULL;
   cairo_rectangle_int_t client_area;
-  g_boolean needs_mask;
+  gboolean needs_mask;
 
   if (!priv->needs_reshape)
     return;
@@ -2430,7 +2430,7 @@ check_needs_reshape (MetaWindowActor *self)
       */
       build_and_scan_frame_mask (self, &borders, &client_area, region);
     }
-    
+
   meta_window_actor_update_shape_region (self, region);
 
   cairo_region_destroy (region);
