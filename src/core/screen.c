@@ -3567,6 +3567,15 @@ meta_screen_get_active_workspace (MetaScreen *screen)
   return screen->active_workspace;
 }
 
+void
+meta_screen_focus_default_window (MetaScreen *screen,
+                                  guint32     timestamp)
+{
+  meta_workspace_focus_default_window (screen->active_workspace,
+                                       NULL,
+                                       timestamp);
+}
+
 LOCAL_SYMBOL void
 meta_screen_restacked (MetaScreen *screen)
 {
