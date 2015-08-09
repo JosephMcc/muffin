@@ -293,7 +293,7 @@ typedef struct
 typedef void (* MetaKeyHandlerFunc) (MetaDisplay    *display,
                                      MetaScreen     *screen,
                                      MetaWindow     *window,
-                                     XEvent         *event,
+                                     XIDeviceEvent  *event,
                                      MetaKeyBinding *binding,
                                      gpointer        user_data);
 
