@@ -84,7 +84,7 @@ MUFFIN_PC_MODULES="
    pango >= 1.14.0
    cairo >= 1.10.0
    cinnamon-desktop >= 2.4.0
-   xcomposite >= 0.3 xfixes xrender xdamage
+   xcomposite >= 0.3 xfixes xrender xdamage xi >= 1.6.0
    $CLUTTER_PACKAGE >= 1.10.0
    cogl-1.0 >= 1.9.6
    gl
