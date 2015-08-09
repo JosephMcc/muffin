@@ -4830,7 +4830,7 @@ meta_display_get_tab_list (MetaDisplay   *display,
       /* Yay for mixing GList and GSList in the API */
       for (w = windows; w; w = w->next)
         global_mru_list = g_list_prepend (global_mru_list, w->data);
-      global_mru_list = g_list_sort (global_mru_list, mru_comp);
+      global_mru_list = g_list_sort (global_mru_list, mru_cmp);
     }
 
   mru_list = workspace ? workspace->mru_list : global_mru_list;
