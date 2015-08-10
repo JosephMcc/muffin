@@ -3583,7 +3583,7 @@ meta_spew_event (MetaDisplay *display,
     return;
 
   /* filter overnumerous events */
-  if (event->type == Expose || event->type = MotionNotify ||
+  if (event->type == Expose || event->type == MotionNotify ||
       event->type == NoExpose)
     return;
 
