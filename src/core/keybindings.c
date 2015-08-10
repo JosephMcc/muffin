@@ -926,7 +926,7 @@ meta_change_keygrab (MetaDisplay *display,
   ignored_mask = 0;
   while (ignored_mask <= display->ignored_modifier_mask)
     {
-      XIGrabModifier mods;
+      XIGrabModifiers mods;
 
       if (ignored_mask & ~(display->ignored_modifier_mask))
         {
