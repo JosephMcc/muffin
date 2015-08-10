@@ -441,6 +441,7 @@ meta_begin_modal_for_plugin (MetaScreen       *screen,
   Display        *xdpy       = meta_display_get_xdisplay (display);
   MetaCompositor *compositor = display->compositor;
   gboolean pointer_grabbed = FALSE;
+  gboolean keyboard_grabbed = FALSE;
   int result;
 
   if (compositor->modal_plugin != NULL || display->grab_op != META_GRAB_OP_NONE)
@@ -449,7 +450,7 @@ meta_begin_modal_for_plugin (MetaScreen       *screen,
   if ((options & META_MODAL_POINTER_ALREADY_GRABBED) == 0)
     {
       unsigned char mask_bits[XIMaskLen (XI_LASTEVENT)] = { 0 };
-      XIEventMask = { XIAllMasterDevices, sizeof (mask_bits), mask_bits };
+      XIEventMask mask = { XIAllMasterDevices, sizeof (mask_bits), mask_bits };
 
       XISetMask (mask.mask, XI_ButtonPress);
       XISetMask (mask.mask, XI_ButtonRelease);
@@ -490,6 +491,8 @@ meta_begin_modal_for_plugin (MetaScreen       *screen,
 
       if (result != Success)
         goto fail;
+
+      keyboard_grabbed = TRUE;
     }
 
   display->grab_op = META_GRAB_OP_COMPOSITOR;
@@ -804,7 +807,7 @@ meta_compositor_set_updates (MetaCompositor *compositor,
 }
 
 static gboolean
-is_grabbed_event (MetaDisplay, *display,
+is_grabbed_event (MetaDisplay  *display,
                   XEvent       *event)
 {
   if (event->type == GenericEvent &&
