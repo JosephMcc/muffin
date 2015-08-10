@@ -6976,28 +6976,30 @@ meta_window_client_message (MetaWindow *window,
            */
           if (button == 0)
             {
-              int x, y, query_root_x, query_root_y;
+              double x, y, query_root_x, query_root_y;
               Window root, child;
-              guint mask;
+              XIButtonState buttons;
+              XIModifierState mods;
+              XIGroupState group;
 
               /* The race conditions in this _NET_WM_MOVERESIZE thing
                * are mind-boggling
                */
-              mask = 0;
               meta_error_trap_push (window->display);
-              XQueryPointer (window->display->xdisplay,
-                             window->xwindow,
-                             &root, &child,
-                             &query_root_x, &query_root_y,
-                             &x, &y,
-                             &mask);
+              XIQueryPointer (window->display->xdisplay,
+                              META_VIRTUAL_CORE_POINTER_ID,
+                              window->xwindow,
+                              &root, &child,
+                              &query_root_x, &query_root_y,
+                              &x, &y,
+                              &buttons, &mods, &group);
               meta_error_trap_pop (window->display);
 
-              if (mask & Button1Mask)
+              if (XIMaskIsSet (buttons.mask, Button1))
                 button = 1;
-              else if (mask & Button2Mask)
+              else if (XIMaskIsSet (buttons.mask, Button2))
                 button = 2;
-              else if (mask & Button3Mask)
+              else if (XIMaskIsSet (buttons.mask, Button3))
                 button = 3;
               else
                 button = 0;

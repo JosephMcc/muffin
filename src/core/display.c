@@ -2042,7 +2042,7 @@ event_callback (XEvent   *event,
           //       }
           //     break;
           //   }
-          if (device_event->detail == 4 || device_event_detail == 5)
+          if (device_event->detail == 4 || device_event->detail == 5)
             break;
 
           if ((window &&
