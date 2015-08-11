@@ -5526,7 +5526,7 @@ meta_theme_create_style_context (GdkScreen   *screen,
                 "gtk_theme_name", &theme_name,
                 NULL);
 
-  style = gtk_style_context_draw ();
+  style = gtk_style_context_new ();
   path = gtk_widget_path_new ();
   gtk_widget_path_append_type (path, META_TYPE_FRAMES);
   gtk_style_context_set_path (style, path);
@@ -5545,7 +5545,7 @@ meta_theme_create_style_context (GdkScreen   *screen,
   return style;
 }
 
-LOCAL_SYMBOL void
+void
 meta_theme_draw_frame (MetaTheme              *theme,
                        GtkStyleContext        *style_gtk,
                        cairo_t                *cr,
