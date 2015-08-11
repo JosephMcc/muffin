@@ -1966,7 +1966,7 @@ event_callback (XEvent   *event,
   if (input_event != NULL)
     {
       if (window && !window->override_redirect &&
-          ((event->type == KeyPress) || (event->type == ButtonPress)))
+          ((input_event->type == KeyPress) || (input_event->type == ButtonPress)))
         {
           if (CurrentTime == display->current_time)
             {
@@ -1989,7 +1989,8 @@ event_callback (XEvent   *event,
         {
         case KeyPress:
         case KeyRelease:
-
+          if (display->grab_op == META_GRAB_OP_COMPOSITOR)
+            break;
           /* For key events, it's important to enforce single-handling, or
            * we can get into a confused state. So if a keybinding is
            * handled (because it's one of our hot-keys, or because we are
