@@ -169,7 +169,7 @@ maybe_redirect_mouse_event (XEvent *xevent)
     {
     case XI_ButtonPress:
     case XI_ButtonRelease:
-      if (xevent->type == ButtonPress)
+      if (xev_d->evtype == XI_ButtonPress)
         {
           GtkSettings *settings = gtk_settings_get_default ();
           int double_click_time;

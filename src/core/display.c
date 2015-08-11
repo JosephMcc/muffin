@@ -2016,7 +2016,10 @@ event_callback (XEvent   *event,
         case XI_KeyPress:
         case XI_KeyRelease:
           if (display->grab_op == META_GRAB_OP_COMPOSITOR)
-            break;
+            {
+              g_printerr ("event_callback Compositor KeyPress/Release\n");
+              break;
+            }
 
           /* For key events, it's important to enforce single-handling, or
            * we can get into a confused state. So if a keybinding is
@@ -2033,7 +2036,10 @@ event_callback (XEvent   *event,
           break;
         case XI_ButtonPress:
           if (display->grab_op == META_GRAB_OP_COMPOSITOR)
-            break;
+            {
+              g_printerr ("event_callback Compositor ButtonPress\n");
+              break;
+            }
 
           g_printerr("XI_ButtonPress\n");
 
@@ -2248,7 +2254,11 @@ event_callback (XEvent   *event,
           break;
         case XI_ButtonRelease:
           if (display->grab_op == META_GRAB_OP_COMPOSITOR)
-            break;
+            {
+              g_printerr ("event_callback Compositor ButtonRelease\n");
+              break;
+            }
+          g_printerr ("event_callback ButtonRelease\n");
 
           if (display->grab_window == window &&
               meta_grab_op_is_mouse (display->grab_op))

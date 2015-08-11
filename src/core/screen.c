@@ -2221,7 +2221,7 @@ meta_screen_get_current_monitor_for_pos (MetaScreen *screen,
                                          int x,
                                          int y)
 {
-  if (screen->n_monitor_infos = 1)
+  if (screen->n_monitor_infos == 1)
     return 0;
   else if (screen->display->monitor_cache_invalidated)
     {
