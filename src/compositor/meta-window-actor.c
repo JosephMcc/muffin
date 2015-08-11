@@ -1692,33 +1692,6 @@ meta_window_actor_update_bounding_region_and_borders (MetaWindowActor *self,
   g_signal_emit (self, signals[SIZE_CHANGED], 0);
 }
 
-static void
-meta_window_actor_update_shape_region (MetaWindowActor *self,
-                                       cairo_region_t  *region)
-{
-  MetaWindowActorPrivate *priv = self->priv;
-
-  meta_window_actor_clear_shape_region (self);
-
-  /* region must be non-null */
-  priv->shape_region = region;
-  cairo_region_reference (region);
-
-  /* Our "shape_region" is called the "bounding region" in the X Shape
-   * Extension Documentation.
-   *
-   * Our "bounding_region" is called the "bounding rectangle", which defines
-   * the shape of the window as if it the window was unshaped.
-   *
-   * The X Shape extension requires that the "bounding region" can never
-   * extend outside the "bounding rectangle", and says it must be implicitly
-   * clipped before rendering. The region we get back hasn't been clipped.
-   * We explicitly clip the region here.
-   */
-  if (priv->bounding_region != NULL)
-    cairo_region_intersect (priv->shape_region, priv->bounding_region);
-}
-
 /**
  * meta_window_actor_get_obscured_region:
  * @self: a #MetaWindowActor
@@ -2367,9 +2340,21 @@ check_needs_reshape (MetaWindowActor *self)
       build_and_scan_frame_mask (self, &borders, &client_area, region);
     }
 
-  meta_window_actor_update_shape_region (self, region);
+  priv->shape_region = region;
 
-  cairo_region_destroy (region);
+  /* Our "shape_region" is called the "bounding region" in the X Shape
+   * Extension Documentation.
+   *
+   * Our "bounding_region" is called the "bounding rectangle", which defines
+   * the shape of the window as if it the window was unshaped.
+   *
+   * The X Shape extension requires that the "bounding region" can never
+   * extend outside the "bounding rectangle", and says it must be implicitly
+   * clipped before rendering. The region we get back hasn't been clipped.
+   * We explicitly clip the region here.
+   */
+   if (priv->bounding_region != NULL)
+    cairo_region_intersect (priv->shape_region, priv->bounding_region);
 
   priv->needs_reshape = FALSE;
   meta_window_actor_invalidate_shadow (self);
