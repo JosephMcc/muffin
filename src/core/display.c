@@ -2035,6 +2035,8 @@ event_callback (XEvent   *event,
           if (display->grab_op == META_GRAB_OP_COMPOSITOR)
             break;
 
+          g_printerr("XI_ButtonPress\n");
+
           // if (display->mouse_zoom_modifiers > 0 && (device_event->detail == 4 || device_event->detail == 5))
           //   {
           //     if ((device_event->mods.effective & ~display->ignored_modifier_mask) == display->mouse_zoom_modifiers)
