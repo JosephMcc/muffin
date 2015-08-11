@@ -6997,11 +6997,11 @@ meta_window_client_message (MetaWindow *window,
                               &buttons, &mods, &group);
               meta_error_trap_pop (window->display);
 
-              if (XIMaskIsSet (buttons.mask, Button1))
+              if (mods.effective & Button1Mask)
                 button = 1;
-              else if (XIMaskIsSet (buttons.mask, Button2))
+              else if (mods.effective & Button2Mask)
                 button = 2;
-              else if (XIMaskIsSet (buttons.mask, Button3))
+              else if (mods.effective & Button3Mask)
                 button = 3;
               else
                 button = 0;
@@ -10617,7 +10617,8 @@ warp_grab_pointer (MetaWindow          *window,
   meta_window_get_client_root_coords (window,
                                       &display->grab_anchor_window_pos);
 
-  XWarpPointer (display->xdisplay,
+  XIWarpPointer (display->xdisplay,
+                META_VIRTUAL_CORE_POINTER_ID,
                 None,
                 window->screen->xroot,
                 0, 0, 0, 0,
