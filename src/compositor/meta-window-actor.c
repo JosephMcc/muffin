@@ -163,10 +163,6 @@ static gboolean meta_window_actor_get_paint_volume (ClutterActor       *actor,
 static void     meta_window_actor_detach     (MetaWindowActor *self);
 static gboolean meta_window_actor_has_shadow (MetaWindowActor *self);
 
-static void meta_window_actor_clear_shape_region    (MetaWindowActor *self);
-static void meta_window_actor_clear_bounding_region (MetaWindowActor *self);
-static void meta_window_actor_clear_shadow_clip     (MetaWindowActor *self);
-
 static void check_needs_reshape (MetaWindowActor *self);
 
 G_DEFINE_TYPE (MetaWindowActor, meta_window_actor, CLUTTER_TYPE_GROUP);
@@ -445,9 +441,9 @@ meta_window_actor_dispose (GObject *object)
 
   meta_window_actor_detach (self);
 
-  meta_window_actor_clear_shape_region (self);
-  meta_window_actor_clear_bounding_region (self);
-  meta_window_actor_clear_shadow_clip (self);
+  g_clear_pointer (&priv->shape_region, cairo_region_destroy);
+  g_clear_pointer (&priv->bounding_region, cairo_region_destroy);
+  g_clear_pointer (&priv->shadow_clip, cairo_region_destroy);
 
   g_clear_pointer (&priv->shadow_class, g_free);
   g_clear_pointer (&priv->focused_shadow, meta_shadow_unref);
@@ -1645,42 +1641,6 @@ meta_window_actor_unmapped (MetaWindowActor *self)
 
   meta_window_actor_detach (self);
   priv->needs_pixmap = FALSE;
-}
-
-static void
-meta_window_actor_clear_shape_region (MetaWindowActor *self)
-{
-  MetaWindowActorPrivate *priv = self->priv;
-
-  if (priv->shape_region)
-    {
-      cairo_region_destroy (priv->shape_region);
-      priv->shape_region = NULL;
-    }
-}
-
-static void
-meta_window_actor_clear_bounding_region (MetaWindowActor *self)
-{
-  MetaWindowActorPrivate *priv = self->priv;
-
-  if (priv->bounding_region)
-    {
-      cairo_region_destroy (priv->bounding_region);
-      priv->bounding_region = NULL;
-    }
-}
-
-static void
-meta_window_actor_clear_shadow_clip (MetaWindowActor *self)
-{
-  MetaWindowActorPrivate *priv = self->priv;
-
-  if (priv->shadow_clip)
-    {
-      cairo_region_destroy (priv->shadow_clip);
-      priv->shadow_clip = NULL;
-    }
 }
 
 static void
