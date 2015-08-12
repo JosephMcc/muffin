@@ -760,7 +760,7 @@ meta_display_open (void)
   }
 
   {
-    int major = 2, minor = 2;
+    int major = 2, minor = 3;
     gboolean has_xi = FALSE;
 
     if (XQueryExtension (the_display->xdisplay,
@@ -1809,12 +1809,12 @@ get_input_event (MetaDisplay  *display,
           break;
         case XI_FocusIn:
         case XI_FocusOut:
-          if (((XIDeviceEvent *) input_event)->deviceid == META_VIRTUAL_CORE_KEYBOARD_ID)
+          if (((XIEnterEvent *) input_event)->deviceid == META_VIRTUAL_CORE_KEYBOARD_ID)
             return input_event;
           break;
         case XI_Enter:
         case XI_Leave:
-          if (((XIDeviceEvent *) input_event)->deviceid == META_VIRTUAL_CORE_POINTER_ID)
+          if (((XIEnterEvent *) input_event)->deviceid == META_VIRTUAL_CORE_POINTER_ID)
             return input_event;
           break;
         default:
@@ -3192,7 +3192,7 @@ meta_spew_xi2_event (MetaDisplay *display,
   char *extra = NULL;
 
   XIDeviceEvent *device_event = (XIDeviceEvent *) input_event;
-  XIEnterEvent *enter_event = (XIEnterEvent *) enter_event;
+  XIEnterEvent *enter_event = (XIEnterEvent *) input_event;
 
   switch (input_event->evtype)
     {
