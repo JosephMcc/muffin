@@ -2274,7 +2274,10 @@ event_callback (XEvent   *event,
           break;
         case XI_Enter:
           if (display->grab_op == META_GRAB_OP_COMPOSITOR)
-            break;
+            {
+              g_printerr ("event_callback Compositor Enter\n");
+              break;
+            }
 
           /* If the mouse switches screens, active the default window on the new
            * screen; this will make keybindings and workspace-launched items
@@ -2336,7 +2339,10 @@ event_callback (XEvent   *event,
           break;
         case XI_Leave:
           if (display->grab_op == META_GRAB_OP_COMPOSITOR)
-            break;
+            {
+              g_printerr ("event_callback Compositor Leave\n");
+              break;
+            }
 
           if (window != NULL)
             {

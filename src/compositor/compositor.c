@@ -511,8 +511,8 @@ meta_begin_modal_for_plugin (MetaScreen       *screen,
  fail:
   if (pointer_grabbed)
     XIUngrabDevice (xdpy,META_VIRTUAL_CORE_POINTER_ID, timestamp);
-  if (keyboard_grabbed)
-    XIUngrabDevice (xdpy, META_VIRTUAL_CORE_KEYBOARD_ID, timestamp);
+  // if (keyboard_grabbed)
+  //   XIUngrabDevice (xdpy, META_VIRTUAL_CORE_KEYBOARD_ID, timestamp);
 
   return FALSE;
 }
