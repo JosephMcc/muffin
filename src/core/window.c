@@ -3785,7 +3785,7 @@ meta_window_is_on_primary_monitor (MetaWindow *window)
 gboolean
 meta_window_requested_bypass_compositor (MetaWindow *window)
 {
-  return window->bypass_compositor;
+  return window->bypass_compositor == _NET_WM_BYPASS_COMPOSITOR_HINT_ON;
 }
 
 /**
@@ -3796,7 +3796,7 @@ meta_window_requested_bypass_compositor (MetaWindow *window)
 gboolean
 meta_window_requested_dont_bypass_compositor (MetaWindow *window)
 {
-  return window->dont_bypass_compositor;
+  return window->bypass_compositor == _NET_WM_BYPASS_COMPOSITOR_HINT_OFF;
 }
 
 static void
