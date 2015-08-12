@@ -448,7 +448,7 @@ meta_window_actor_dispose (GObject *object)
   g_clear_pointer (&priv->shadow_class, g_free);
   g_clear_pointer (&priv->focused_shadow, meta_shadow_unref);
   g_clear_pointer (&priv->unfocused_shadow, meta_shadow_unref);
-  g_clear_pointer (&priv->shadow_shape, meta_shadow_unref);
+  g_clear_pointer (&priv->shadow_shape, meta_window_shape_unref);
 
   if (priv->damage != None)
     {
