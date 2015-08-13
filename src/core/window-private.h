@@ -96,8 +96,8 @@ enum {
 #define CSD_TITLEBAR_HEIGHT 48
 
 typedef enum {
-  _NET_WM_BYPASS_COMPOSITOR_HINT_AUTO = 0;
-  _NET_WM_BYPASS_COMPOSITOR_HINT_ON = 1;
+  _NET_WM_BYPASS_COMPOSITOR_HINT_AUTO = 0,
+  _NET_WM_BYPASS_COMPOSITOR_HINT_ON = 1,
   _NET_WM_BYPASS_COMPOSITOR_HINT_OFF = 2,
 } MetaBypassCompositorHintValue;
 
@@ -392,6 +392,9 @@ struct _MetaWindow
 
   /* if non-NULL, the bounds of the window frame */
   cairo_region_t *frame_bounds;
+
+  /* if non-NULL, the opaque region _NET_WM_OPAQUE_REGION */
+  cairo_region_t *opaque_region;
 
   /* Note: can be NULL */
   GSList *struts;
@@ -743,6 +746,7 @@ void meta_window_update_icon_now (MetaWindow *window);
 
 void meta_window_update_role (MetaWindow *window);
 void meta_window_update_net_wm_type (MetaWindow *window);
+void meta_window_update_opaque_region (MetaWindow *window);
 void meta_window_update_for_monitors_changed (MetaWindow *window);
 void meta_window_update_on_all_workspaces (MetaWindow *window);
 

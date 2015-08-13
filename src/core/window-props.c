@@ -550,6 +550,14 @@ reload_wm_name (MetaWindow    *window,
 }
 
 static void
+reload_opaque_hints (MetaWindow    *window,
+                     MetaPropValue *value,
+                     gboolean       initial)
+{
+  meta_window_update_opaque_region (window);
+}
+
+static void
 reload_muffin_hints (MetaWindow    *window,
                      MetaPropValue *value,
                      gboolean       initial)
@@ -1666,7 +1674,7 @@ reload_bypass_compositor (MetaWindow    *window,
     return;
 
   if (requested_value == _NET_WM_BYPASS_COMPOSITOR_HINT_ON)
-    meta_verbose ("Request to bypass compositor for window %s.\n", window-desc);
+    meta_verbose ("Request to bypass compositor for window %s.\n", window->desc);
   else if (requested_value == _NET_WM_BYPASS_COMPOSITOR_HINT_OFF)
     meta_verbose ("Request to don't bypass compositor for window %s.\n", window->desc);
   else if (requested_value != _NET_WM_BYPASS_COMPOSITOR_HINT_AUTO)
@@ -1740,6 +1748,7 @@ meta_display_init_window_prop_hooks (MetaDisplay *display)
     { display->atom__NET_WM_PID,       META_PROP_VALUE_CARDINAL, reload_net_wm_pid,        TRUE,  TRUE },
     { XA_WM_NAME,                      META_PROP_VALUE_TEXT_PROPERTY, reload_wm_name,      TRUE,  TRUE },
     { display->atom__MUFFIN_HINTS,     META_PROP_VALUE_TEXT_PROPERTY, reload_muffin_hints, TRUE,  TRUE },
+    { display->atom__NET_WM_OPAQUE_REGION, META_PROP_VALUE_CARDINAL_LIST, reload_opaque_hints, TRUE, TRUE },
     { display->atom__NET_WM_ICON_NAME, META_PROP_VALUE_UTF8,     reload_net_wm_icon_name,  TRUE,  FALSE },
     { XA_WM_ICON_NAME,                 META_PROP_VALUE_TEXT_PROPERTY, reload_wm_icon_name, TRUE,  FALSE },
     { display->atom__NET_WM_DESKTOP,   META_PROP_VALUE_CARDINAL, reload_net_wm_desktop,    TRUE,  FALSE },
