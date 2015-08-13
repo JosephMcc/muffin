@@ -550,9 +550,9 @@ reload_wm_name (MetaWindow    *window,
 }
 
 static void
-reload_opaque_hints (MetaWindow    *window,
-                     MetaPropValue *value,
-                     gboolean       initial)
+reload_opaque_region (MetaWindow    *window,
+                      MetaPropValue *value,
+                      gboolean       initial)
 {
   meta_window_update_opaque_region (window);
 }

@@ -48,6 +48,7 @@
 #include "window-props.h"
 #include "constraints.h"
 #include "muffin-enum-types.h"
+#include "core.h"
 #include <clutter/clutter.h>
 
 #include <X11/Xatom.h>
