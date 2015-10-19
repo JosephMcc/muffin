@@ -55,6 +55,7 @@
 
 #include <config.h>
 #include "theme-private.h"
+#include "frames.h" /* for META_TYPE_FRAMES */
 #include <meta/util.h>
 #include <meta/gradient.h>
 #include <meta/prefs.h>
@@ -620,7 +621,7 @@ strip_button (MetaButtonSpace *func_rects[MAX_BUTTONS_PER_CORNER],
   return FALSE; /* did not strip anything */
 }
 
-LOCAL_SYMBOL void
+static void
 meta_frame_layout_calc_geometry (const MetaFrameLayout  *layout,
                                  int                     text_height,
                                  MetaFrameFlags          flags,
@@ -3688,7 +3689,6 @@ fill_env (MetaPositionExprEnv *env,
 static void
 meta_draw_op_draw_with_env (const MetaDrawOp    *op,
                             GtkStyleContext     *style_gtk,
-                            GtkWidget           *widget,
                             cairo_t             *cr,
                             const MetaDrawInfo  *info,
                             MetaRectangle        rect,
@@ -4098,7 +4098,7 @@ meta_draw_op_draw_with_env (const MetaDrawOp    *op,
         d_rect.height = parse_size_unchecked (op->data.op_list.height, env);
 
         meta_draw_op_list_draw_with_style (op->data.op_list.op_list,
-                                           style_gtk, widget, cr, info,
+                                           style_gtk, cr, info,
                                 d_rect);
       }
       break;
@@ -4136,7 +4136,7 @@ meta_draw_op_draw_with_env (const MetaDrawOp    *op,
             while (tile.y < (ry + rheight))
               {
                 meta_draw_op_list_draw_with_style (op->data.tile.op_list,
-                                                   style_gtk, widget, cr, info,
+                                                   style_gtk, cr, info,
                                         tile);
 
                 tile.y += tile.height;
@@ -4157,7 +4157,6 @@ meta_draw_op_draw_with_env (const MetaDrawOp    *op,
 LOCAL_SYMBOL void
 meta_draw_op_draw_with_style (const MetaDrawOp    *op,
                               GtkStyleContext     *style_gtk,
-                              GtkWidget           *widget,
                               cairo_t             *cr,
                               const MetaDrawInfo  *info,
                               MetaRectangle        logical_region)
@@ -4166,21 +4165,10 @@ meta_draw_op_draw_with_style (const MetaDrawOp    *op,
 
   fill_env (&env, info, logical_region);
 
-  meta_draw_op_draw_with_env (op, style_gtk, widget, cr,
+  meta_draw_op_draw_with_env (op, style_gtk, cr,
                               info, logical_region,
                               &env);
 
-}
-
-LOCAL_SYMBOL void
-meta_draw_op_draw (const MetaDrawOp    *op,
-                   GtkWidget           *widget,
-                   cairo_t             *cr,
-                   const MetaDrawInfo  *info,
-                   MetaRectangle        logical_region)
-{
-  meta_draw_op_draw_with_style (op, gtk_widget_get_style_context (widget),
-                                widget, cr, info, logical_region);
 }
 
 /**
@@ -4237,7 +4225,6 @@ meta_draw_op_list_unref (MetaDrawOpList *op_list)
 LOCAL_SYMBOL void
 meta_draw_op_list_draw_with_style  (const MetaDrawOpList *op_list,
                                     GtkStyleContext      *style_gtk,
-                                    GtkWidget            *widget,
                                     cairo_t              *cr,
                                     const MetaDrawInfo   *info,
                                     MetaRectangle         rect)
@@ -4284,25 +4271,13 @@ meta_draw_op_list_draw_with_style  (const MetaDrawOpList *op_list,
       else if (gdk_cairo_get_clip_rectangle (cr, NULL))
         {
           meta_draw_op_draw_with_env (op,
-                                      style_gtk, widget, cr, info,
+                                      style_gtk, cr, info,
                                       rect,
                                       &env);
         }
     }
 
   cairo_restore (cr);
-}
-
-LOCAL_SYMBOL void
-meta_draw_op_list_draw  (const MetaDrawOpList *op_list,
-                         GtkWidget            *widget,
-                         cairo_t              *cr,
-                         const MetaDrawInfo   *info,
-                         MetaRectangle         rect)
-
-{
-  meta_draw_op_list_draw_with_style (op_list, gtk_widget_get_style_context (widget), widget,
-                                     cr, info, rect);
 }
 
 LOCAL_SYMBOL void
@@ -4683,10 +4658,9 @@ get_button_rect (MetaButtonType           type,
     }
 }
 
-LOCAL_SYMBOL LOCAL_SYMBOL void
+static void
 meta_frame_style_draw_with_style (MetaFrameStyle          *style,
-                                  GtkStyleContext         *style_gtk,
-                                  GtkWidget               *widget,
+                                  MetaStyleInfo           *style_info,
                                   cairo_t                 *cr,
                                   const MetaFrameGeometry *fgeom,
                                   int                      client_width,
@@ -4855,8 +4829,7 @@ meta_frame_style_draw_with_style (MetaFrameStyle          *style,
               MetaRectangle m_rect;
               m_rect = meta_rect (rect.x, rect.y, rect.width, rect.height);
               meta_draw_op_list_draw_with_style (op_list,
-                                                 style_gtk,
-                                                 widget,
+                                                 style_info->styles[META_STYLE_ELEMENT_FRAME],
                                                  cr,
                                                  &draw_info,
                                                  m_rect);
@@ -4897,8 +4870,7 @@ meta_frame_style_draw_with_style (MetaFrameStyle          *style,
                                           rect.width, rect.height);
 
                       meta_draw_op_list_draw_with_style (op_list,
-                                                         style_gtk,
-                                                         widget,
+                                                         style_info->styles[META_STYLE_ELEMENT_FRAME],
                                                          cr,
                                                          &draw_info,
                                                          m_rect);
@@ -4924,25 +4896,6 @@ meta_frame_style_draw_with_style (MetaFrameStyle          *style,
 
       ++i;
     }
-}
-
-LOCAL_SYMBOL void
-meta_frame_style_draw (MetaFrameStyle          *style,
-                       GtkWidget               *widget,
-                       cairo_t                 *cr,
-                       const MetaFrameGeometry *fgeom,
-                       int                      client_width,
-                       int                      client_height,
-                       PangoLayout             *title_layout,
-                       int                      text_height,
-                       MetaButtonState          button_states[META_BUTTON_TYPE_LAST],
-                       GdkPixbuf               *mini_icon,
-                       GdkPixbuf               *icon)
-{
-  meta_frame_style_draw_with_style (style, gtk_widget_get_style_context (widget), widget,
-                                    cr, fgeom, client_width, client_height,
-                                    title_layout, text_height,
-                                    button_states, mini_icon, icon);
 }
 
 LOCAL_SYMBOL MetaFrameStyleSet*
@@ -5172,16 +5125,14 @@ meta_theme_get_current (void)
 }
 
 void
-meta_theme_set_current (const char *name,
-                        gboolean    force_reload)
+meta_theme_set_current (const char *name)
 {
   MetaTheme *new_theme;
   GError *err;
 
   meta_topic (META_DEBUG_THEMES, "Setting current theme to \"%s\"\n", name);
   
-  if (!force_reload &&
-      meta_current_theme &&
+  if (meta_current_theme &&
       strcmp (name, meta_current_theme->name) == 0)
     return;
   
@@ -5568,21 +5519,86 @@ meta_theme_get_title_scale (MetaTheme     *theme,
   return style->layout->title_scale;
 }
 
-LOCAL_SYMBOL void
-meta_theme_draw_frame_with_style (MetaTheme              *theme,
-                                  GtkStyleContext        *style_gtk,
-                                  GtkWidget              *widget,
-                                  cairo_t                *cr,
-                                  MetaFrameType           type,
-                                  MetaFrameFlags          flags,
-                                  int                     client_width,
-                                  int                     client_height,
-                                  PangoLayout            *title_layout,
-                                  int                     text_height,
-                                  const MetaButtonLayout *button_layout,
-                                  MetaButtonState         button_states[META_BUTTON_TYPE_LAST],
-                                  GdkPixbuf              *mini_icon,
-                                  GdkPixbuf              *icon)
+MetaStyleInfo *
+meta_theme_create_style_info (GdkScreen   *screen,
+                              const gchar *variant)
+{
+  GtkWidgetPath *path;
+  MetaStyleInfo *style_info;
+  GtkStyleContext *style;
+  char *theme_name;
+
+  g_object_get (gtk_settings_get_for_screen (screen),
+                "gtk-theme-name", &theme_name,
+                NULL);
+
+  style_info = g_new0 (MetaStyleInfo, 1);
+  style_info->refcount = 1;
+
+  path = gtk_widget_path_new ();
+
+  style_info->styles[META_STYLE_ELEMENT_FRAME] = style = gtk_style_context_new ();
+  gtk_widget_path_append_type (path, META_TYPE_FRAMES);
+  gtk_widget_path_iter_add_class (path, -1, GTK_STYLE_CLASS_BACKGROUND);
+  gtk_widget_path_iter_add_class (path, -1, "window-frame");
+  gtk_style_context_set_path (style, path);
+
+  gtk_widget_path_unref (path);
+
+  if (theme_name && *theme_name)
+    {
+      GtkCssProvider *provider;
+
+      provider = gtk_css_provider_get_named (theme_name, variant);
+      gtk_style_context_add_provider (style,
+                                      GTK_STYLE_PROVIDER (provider),
+                                      GTK_STYLE_PROVIDER_PRIORITY_SETTINGS);
+    }
+
+  g_free (theme_name);
+
+  return style_info;
+}
+
+MetaStyleInfo *
+meta_style_info_ref (MetaStyleInfo *style_info)
+{
+  g_return_val_if_fail (style_info != NULL, NULL);
+  g_return_val_if_fail (style_info->refcount > 0, NULL);
+
+  g_atomic_int_inc ((volatile int *)&style_info->refcount);
+  return style_info;
+}
+
+void
+meta_style_info_unref (MetaStyleInfo *style_info)
+{
+  g_return_if_fail (style_info != NULL);
+  g_return_if_fail (style_info->refcount > 0);
+
+  if (g_atomic_int_dec_and_test ((volatile int *)&style_info->refcount))
+    {
+      int i;
+      for (i = 0; i < META_STYLE_ELEMENT_LAST; i++)
+        g_object_unref (style_info->styles[i]);
+      g_free (style_info);
+    }
+}
+
+void
+meta_theme_draw_frame (MetaTheme              *theme,
+                       MetaStyleInfo          *style_info,
+                       cairo_t                *cr,
+                       MetaFrameType           type,
+                       MetaFrameFlags          flags,
+                       int                     client_width,
+                       int                     client_height,
+                       PangoLayout            *title_layout,
+                       int                     text_height,
+                       const MetaButtonLayout *button_layout,
+                       MetaButtonState         button_states[META_BUTTON_TYPE_LAST],
+                       GdkPixbuf              *mini_icon,
+                       GdkPixbuf              *icon)
 {
   MetaFrameGeometry fgeom;
   MetaFrameStyle *style;
@@ -5605,37 +5621,13 @@ meta_theme_draw_frame_with_style (MetaTheme              *theme,
                                    theme);  
 
   meta_frame_style_draw_with_style (style,
-                                    style_gtk,
-                                    widget,
+                                    style_info,
                                     cr,
                                     &fgeom,
                                     client_width, client_height,
                                     title_layout,
                                     text_height,
                                     button_states,
-                                    mini_icon, icon);
-}
-
-void
-meta_theme_draw_frame (MetaTheme              *theme,
-                       GtkWidget              *widget,
-                       cairo_t                *cr,
-                       MetaFrameType           type,
-                       MetaFrameFlags          flags,
-                       int                     client_width,
-                       int                     client_height,
-                       PangoLayout            *title_layout,
-                       int                     text_height,
-                       const MetaButtonLayout *button_layout,
-                       MetaButtonState         button_states[META_BUTTON_TYPE_LAST],
-                       GdkPixbuf              *mini_icon,
-                       GdkPixbuf              *icon)
-{
-  meta_theme_draw_frame_with_style (theme, gtk_widget_get_style_context (widget), widget,
-                                    cr, type,flags,
-                                    client_width, client_height,
-                                    title_layout, text_height,
-                                    button_layout, button_states,
                                     mini_icon, icon);
 }
 

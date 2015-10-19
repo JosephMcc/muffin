@@ -75,12 +75,11 @@ struct _MetaUIFrame
 {
   Window xwindow;
   GdkWindow *window;
-  GtkStyleContext *style;
+  MetaStyleInfo *style_info;
   MetaFrameStyle *cache_style;
   PangoLayout *layout;
   int text_height;
   char *title; /* NULL once we have a layout */
-  guint expose_delayed : 1;
   guint shape_applied : 1;
   
   /* FIXME get rid of this, it can just be in the MetaFrames struct */
@@ -95,17 +94,10 @@ struct _MetaFrames
 
   GHashTable *frames;
 
-  guint tooltip_timeout;
   MetaUIFrame *last_motion_frame;
 
-  GtkStyleContext *normal_style;
+  MetaStyleInfo *normal_style;
   GHashTable *style_variants;
-
-  int expose_delay_count;
-
-  int invalidate_cache_timeout_id;
-  GList *invalidate_frames;
-  GHashTable *cache;
 };
 
 struct _MetaFramesClass
@@ -137,13 +129,6 @@ void meta_frames_get_borders (MetaFrames *frames,
                               Window xwindow,
                               MetaFrameBorders *borders);
 
-void meta_frames_reset_bg     (MetaFrames *frames,
-                               Window      xwindow);
-void meta_frames_unflicker_bg (MetaFrames *frames,
-                               Window      xwindow,
-                               int         target_width,
-                               int         target_height);
-
 cairo_region_t *meta_frames_get_frame_bounds (MetaFrames *frames,
                                               Window      xwindow,
                                               int         window_width,
@@ -168,8 +153,5 @@ void meta_frames_queue_draw (MetaFrames *frames,
 void meta_frames_notify_menu_hide (MetaFrames *frames);
 
 Window meta_frames_get_moving_frame (MetaFrames *frames);
-
-void meta_frames_push_delay_exposes (MetaFrames *frames);
-void meta_frames_pop_delay_exposes  (MetaFrames *frames);
 
 #endif

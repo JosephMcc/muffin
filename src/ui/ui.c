@@ -333,6 +333,17 @@ meta_ui_get_corner_radiuses (MetaUI *ui,
                                    bottom_left, bottom_right);
 }
 
+static void
+set_background_none (Display *xdisplay,
+                     Window   xwindow)
+{
+  XSetWindowAttributes attrs;
+
+  attrs.background_pixmap = None;
+  XChangeWindowAttributes (xdisplay, xwindow,
+                           CWBackPixmap, &attrs);
+}
+
 LOCAL_SYMBOL Window
 meta_ui_create_frame_window (MetaUI *ui,
                              Display *xdisplay,
@@ -399,6 +410,7 @@ meta_ui_create_frame_window (MetaUI *ui,
 		    &attrs, attributes_mask);
 
   gdk_window_resize (window, width, height);
+  set_background_none (xdisplay, GDK_WINDOW_XID (window));
   
   meta_frames_manage_window (ui->frames, GDK_WINDOW_XID (window), window);
 
@@ -452,16 +464,6 @@ meta_ui_unmap_frame (MetaUI *ui,
 }
 
 LOCAL_SYMBOL void
-meta_ui_unflicker_frame_bg (MetaUI *ui,
-                            Window  xwindow,
-                            int     target_width,
-                            int     target_height)
-{
-  meta_frames_unflicker_bg (ui->frames, xwindow,
-                            target_width, target_height);
-}
-
-LOCAL_SYMBOL void
 meta_ui_update_frame_style (MetaUI  *ui,
                             Window   xwindow)
 {
@@ -473,13 +475,6 @@ meta_ui_repaint_frame (MetaUI *ui,
                        Window xwindow)
 {
   meta_frames_repaint_frame (ui->frames, xwindow);
-}
-
-LOCAL_SYMBOL void
-meta_ui_reset_frame_bg (MetaUI *ui,
-                        Window xwindow)
-{
-  meta_frames_reset_bg (ui->frames, xwindow);
 }
 
 LOCAL_SYMBOL cairo_region_t *
@@ -589,18 +584,6 @@ meta_gdk_pixbuf_get_from_pixmap (Pixmap       xpixmap,
   cairo_surface_destroy (surface);
 
   return retval;
-}
-
-LOCAL_SYMBOL void
-meta_ui_push_delay_exposes (MetaUI *ui)
-{
-  meta_frames_push_delay_exposes (ui->frames);
-}
-
-LOCAL_SYMBOL void
-meta_ui_pop_delay_exposes  (MetaUI *ui)
-{
-  meta_frames_pop_delay_exposes (ui->frames);
 }
 
 LOCAL_SYMBOL GdkPixbuf*
@@ -769,10 +752,9 @@ meta_ui_theme_get_frame_borders (MetaUI *ui,
 }
 
 LOCAL_SYMBOL void
-meta_ui_set_current_theme (const char *name,
-                           gboolean    force_reload)
+meta_ui_set_current_theme (const char *name)
 {
-  meta_theme_set_current (name, force_reload);
+  meta_theme_set_current (name);
   meta_invalidate_default_icons ();
 }
 
