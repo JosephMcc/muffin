@@ -498,11 +498,11 @@ meta_run (void)
   if (g_getenv ("MUFFIN_G_FATAL_WARNINGS") != NULL)
     g_log_set_always_fatal (G_LOG_LEVEL_MASK);
   
-  meta_ui_set_current_theme (meta_prefs_get_theme (), FALSE);
+  meta_ui_set_current_theme (meta_prefs_get_theme ());
 
   if (!meta_ui_have_a_theme ())
     {
-      meta_ui_set_current_theme ("Default", FALSE);
+      meta_ui_set_current_theme ("Default");
       meta_warning (_("Could not find theme %s. Falling back to default theme."), meta_prefs_get_theme ());
     }
  
@@ -582,7 +582,7 @@ prefs_changed_callback (MetaPreference pref,
     {
     case META_PREF_THEME:
     case META_PREF_DRAGGABLE_BORDER_WIDTH:
-      meta_ui_set_current_theme (meta_prefs_get_theme (), FALSE);
+      meta_ui_set_current_theme (meta_prefs_get_theme ());
       meta_display_retheme_all ();
       break;
 
