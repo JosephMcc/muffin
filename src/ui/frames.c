@@ -234,8 +234,6 @@ meta_frames_init (MetaFrames *frames)
 
   update_style_contexts (frames);
 
-  gtk_widget_set_double_buffered (GTK_WIDGET (frames), FALSE);
-
   meta_prefs_add_listener (prefs_changed_callback, frames);
 }
 
@@ -493,6 +491,7 @@ meta_frames_calc_geometry (MetaFrames        *frames,
   meta_prefs_get_button_layout (&button_layout);
   
   meta_theme_calc_geometry (meta_theme_get_current (),
+                            frame->style_info,
                             type,
                             frame->text_height,
                             flags,
@@ -663,6 +662,7 @@ meta_ui_frame_get_borders (MetaFrames *frames,
    * window size
    */
   meta_theme_get_frame_borders (meta_theme_get_current (),
+                                frame->style_info,
                                 type,
                                 frame->text_height,
                                 flags,
@@ -1830,58 +1830,34 @@ meta_frames_destroy_event           (GtkWidget           *widget,
   return TRUE;
 }
 
-
-static void
-setup_bg_cr (cairo_t *cr, GdkWindow *window, int x_offset, int y_offset)
+static cairo_region_t *
+get_visible_frame_border_region (MetaUIFrame *frame)
 {
-  GdkWindow *parent = gdk_window_get_parent (window);
-  cairo_pattern_t *bg_pattern;
-
-  bg_pattern = gdk_window_get_background_pattern (window);
-  if (bg_pattern == NULL && parent)
-    {
-      gint window_x, window_y;
-
-      gdk_window_get_position (window, &window_x, &window_y);
-      setup_bg_cr (cr, parent, x_offset + window_x, y_offset + window_y);
-    }
-  else if (bg_pattern)
-    {
-      cairo_translate (cr, - x_offset, - y_offset);
-      cairo_set_source (cr, bg_pattern);
-      cairo_translate (cr, x_offset, y_offset);
-    }
-}
-
-static void
-clip_region_to_visible_frame_border (cairo_region_t *region,
-                                     MetaUIFrame    *frame)
-{
+  MetaRectangle frame_rect;
   cairo_rectangle_int_t area;
   cairo_region_t *frame_border;
   MetaFrameFlags flags;
   MetaFrameType type;
   MetaFrameBorders borders;
   Display *display;
-  int frame_width, frame_height;
   
   display = GDK_DISPLAY_XDISPLAY (gdk_display_get_default ());
 
   meta_core_get (display, frame->xwindow,
                  META_CORE_GET_FRAME_FLAGS, &flags,
                  META_CORE_GET_FRAME_TYPE, &type,
-                 META_CORE_GET_FRAME_WIDTH, &frame_width,
-                 META_CORE_GET_FRAME_HEIGHT, &frame_height,
+                 META_CORE_GET_FRAME_RECT, &frame_rect,
                  META_CORE_GET_END);
-  meta_theme_get_frame_borders (meta_theme_get_current (),
+
+  meta_theme_get_frame_borders (meta_theme_get_current (), frame->style_info,
                                 type, frame->text_height, flags, 
                                 &borders);
 
   /* Visible frame rect */
   area.x = borders.invisible.left;
   area.y = borders.invisible.top;
-  area.width = frame_width - borders.invisible.left - borders.invisible.right;
-  area.height = frame_height - borders.invisible.top - borders.invisible.bottom;
+  area.width = frame_rect.width;
+  area.height = frame_rect.height;
 
   frame_border = cairo_region_create_rectangle (&area);
 
@@ -1893,9 +1869,8 @@ clip_region_to_visible_frame_border (cairo_region_t *region,
 
   /* Visible frame border */
   cairo_region_subtract_rectangle (frame_border, &area);
-  cairo_region_intersect (region, frame_border);
 
-  cairo_region_destroy (frame_border);
+  return frame_border;
 }
 
 #define TAU (2*M_PI)
@@ -1994,42 +1969,43 @@ meta_frames_get_mask (MetaFrames          *frames,
   cairo_restore (cr);
 }
 
+/* XXX -- this is disgusting. Find a better approach here.
+ * Use multiple widgets? */
+static MetaUIFrame *
+find_frame_to_draw (MetaFrames *frames,
+                    cairo_t    *cr)
+{
+  GHashTableIter iter;
+  MetaUIFrame *frame;
+
+  g_hash_table_iter_init (&iter, frames->frames);
+  while (g_hash_table_iter_next (&iter, (gpointer *) &frame, NULL))
+    if (gtk_cairo_should_draw_window (cr, frame->window))
+      return frame;
+
+  return NULL;
+}
+
 static gboolean
 meta_frames_draw (GtkWidget *widget,
                   cairo_t   *cr)
 {
   MetaUIFrame *frame;
   MetaFrames *frames;
-  cairo_rectangle_int_t clip;
   cairo_region_t *region;
-  cairo_surface_t *target;
 
   frames = META_FRAMES (widget);
-  target = cairo_get_target (cr);
-  gdk_cairo_get_clip_rectangle (cr, &clip);
 
-  g_assert (cairo_surface_get_type (target) == CAIRO_SURFACE_TYPE_XLIB);
-  frame = meta_frames_lookup_window (frames, cairo_xlib_surface_get_drawable (target));
+  frame = find_frame_to_draw (frames, cr);
   if (frame == NULL)
     return FALSE;
 
-  region = cairo_region_create_rectangle (&clip);
-  clip_region_to_visible_frame_border (region, frame);
-
-  if (cairo_region_is_empty (region))
-    goto out;
-
+  region = get_visible_frame_border_region (frame);
   gdk_cairo_region (cr, region);
   cairo_clip (cr);
 
-  cairo_save (cr);
-  setup_bg_cr (cr, frame->window, 0, 0);
-  cairo_paint (cr);
-  cairo_restore (cr);
-
   meta_frames_paint (frames, frame, cr);
 
- out:
   cairo_region_destroy (region);
   
   return TRUE;
@@ -2043,7 +2019,6 @@ meta_frames_paint (MetaFrames   *frames,
   MetaFrameFlags flags;
   MetaFrameType type;
   GdkPixbuf *mini_icon;
-  GdkPixbuf *icon;
   int w, h;
   MetaButtonState button_states[META_BUTTON_TYPE_LAST];
   Window grab_frame;
@@ -2139,7 +2114,6 @@ meta_frames_paint (MetaFrames   *frames,
                  META_CORE_GET_FRAME_FLAGS, &flags,
                  META_CORE_GET_FRAME_TYPE, &type,
                  META_CORE_GET_MINI_ICON, &mini_icon,
-                 META_CORE_GET_ICON, &icon,
                  META_CORE_GET_CLIENT_WIDTH, &w,
                  META_CORE_GET_CLIENT_HEIGHT, &h,
                  META_CORE_GET_END);
@@ -2158,7 +2132,7 @@ meta_frames_paint (MetaFrames   *frames,
                          frame->text_height,
                          &button_layout,
                          button_states,
-                         mini_icon, icon);
+                         mini_icon);
 }
 
 static gboolean

@@ -5926,16 +5926,17 @@ meta_window_get_input_rect (const MetaWindow *window,
 }
 
 /**
- * meta_window_get_outer_rect:
+ * meta_window_get_frame_rect:
  * @window: a #MetaWindow
  * @rect: (out): pointer to an allocated #MetaRectangle
  *
- * Gets the rectangle that bounds @window that is responsive to mouse events.
- * This includes only what is visible; it doesn't include any extra reactive
- * area we add to the edges of windows.
+ * Gets the rectangle that bounds @window that is what the user thinks of
+ * as the edge of the window. This doesn't include any extra reactive
+ * area that we or the client adds to the window, or any area that the
+ * client adds to draw a client-side shadow.
  */
 void
-meta_window_get_outer_rect (const MetaWindow *window,
+meta_window_get_frame_rect (const MetaWindow *window,
                             MetaRectangle    *rect)
 {
   if (window->frame)
@@ -5962,6 +5963,25 @@ meta_window_get_outer_rect (const MetaWindow *window,
           rect->height -= extents->top + extents->bottom;
         }
     }
+}
+
+/**
+ * meta_window_get_outer_rect:
+ * @window: a #MetaWindow
+ * @rect: (out): pointer to an allocated #MetaRectangle
+ *
+ * Gets the rectangle that bounds @window that is what the user thinks of
+ * as the edge of the window. This doesn't include any extra reactive
+ * area that we or the client adds to the window, or any area that the
+ * client adds to draw a client-side shadow.
+ *
+ * Deprecated: 3.10: Use meta_window_get_frame_rect() instead.
+ */
+void
+meta_window_get_outer_rect (const MetaWindow *window,
+                            MetaRectangle    *rect)
+{
+  meta_window_get_frame_rect (window, rect);
 }
 
 MetaSide

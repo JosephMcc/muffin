@@ -138,11 +138,8 @@ meta_core_get (Display *xdisplay,
       case META_CORE_GET_FRAME_Y:
         *((gint*)answer) = window->frame->rect.y;
         break;
-      case META_CORE_GET_FRAME_WIDTH:
-        *((gint*)answer) = window->frame->rect.width;
-        break;
-      case META_CORE_GET_FRAME_HEIGHT:
-        *((gint*)answer) = window->frame->rect.height;
+      case META_CORE_GET_FRAME_RECT:
+          meta_window_get_frame_rect (window, ((MetaRectangle*)answer));
         break;
       case META_CORE_GET_THEME_VARIANT:
         *((char**)answer) = window->gtk_theme_variant;
