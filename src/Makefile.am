@@ -82,8 +82,6 @@ libmuffin_la_SOURCES =				\
 	core/display.c				\
 	core/display-private.h			\
 	meta/display.h				\
-	ui/draw-workspace.c			\
-	ui/draw-workspace.h			\
 	core/edge-resistance.c			\
 	core/edge-resistance.h			\
 	core/errors.c				\
@@ -142,7 +140,6 @@ libmuffin_la_SOURCES =				\
 	ui/metaaccellabel.h			\
 	ui/resizepopup.c			\
 	ui/resizepopup.h			\
-	ui/theme-parser.c			\
 	ui/theme.c				\
 	meta/theme.h				\
 	ui/theme-private.h			\
