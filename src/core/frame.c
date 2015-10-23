@@ -155,12 +155,8 @@ meta_window_ensure_frame (MetaWindow *window)
   /* Now that frame->xwindow is registered with window, we can set its
    * style and background.
    */
-  meta_ui_update_frame_style (window->screen->ui, frame->xwindow);
-  
-  if (window->title)
-    meta_ui_set_frame_title (window->screen->ui,
-                             window->frame->xwindow,
-                             window->title);
+  meta_frame_update_style (frame);
+  meta_frame_update_title (frame);
 
   /* Move keybindings to frame instead of window */
   meta_window_grab_keys (window);
@@ -431,4 +427,17 @@ LOCAL_SYMBOL Window
 meta_frame_get_xwindow (MetaFrame *frame)
 {
   return frame->xwindow;
+}
+
+void
+meta_frame_update_style (MetaFrame *frame)
+{
+  meta_ui_update_frame_style (frame->window->screen->ui, frame->xwindow);
+}
+
+void
+meta_frame_update_title (MetaFrame *frame)
+{
+  if (frame->window->title)
+    meta_ui_set_frame_title (frame->window->screen->ui, frame->xwindow, frame->window->title);
 }

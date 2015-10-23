@@ -7929,7 +7929,7 @@ redraw_icon (MetaWindow *window)
    * instead of the whole frame.
    */
   if (window->frame && (window->mapped || window->frame->mapped))
-    meta_ui_queue_frame_draw (window->screen->ui, window->frame->xwindow);
+    meta_frame_queue_draw (window->frame);
 }
 
 LOCAL_SYMBOL void
