@@ -134,9 +134,6 @@ meta_window_ensure_frame (MetaWindow *window)
                   "Incrementing unmaps_pending on %s for reparent\n", window->desc);
       window->unmaps_pending += 1;
     }
-  /* window was reparented to this position */
-  window->rect.x = 0;
-  window->rect.y = 0;
 
   meta_stack_tracker_record_remove (window->screen->stack_tracker,
                                     window->xwindow,
@@ -144,8 +141,8 @@ meta_window_ensure_frame (MetaWindow *window)
   XReparentWindow (window->display->xdisplay,
                    window->xwindow,
                    frame->xwindow,
-                   window->rect.x,
-                   window->rect.y);
+                   frame->child_x,
+                   frame->child_y);
   /* FIXME handle this error */
   meta_error_trap_pop (window->display);
   
