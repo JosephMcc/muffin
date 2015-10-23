@@ -5347,9 +5347,7 @@ meta_window_move_resize_internal (MetaWindow          *window,
     meta_window_set_gravity (window, StaticGravity);
 
   if (configure_frame_first && window->frame)
-    frame_shape_changed = meta_frame_sync_to_window (window->frame,
-                                                     gravity,
-                                                     need_move_frame, need_resize_frame);
+    frame_shape_changed = meta_frame_sync_to_window (window->frame, need_resize_frame);
 
   values.border_width = 0;
   values.x = client_move_x;
@@ -5402,9 +5400,7 @@ meta_window_move_resize_internal (MetaWindow          *window,
     }
 
   if (!configure_frame_first && window->frame)
-    frame_shape_changed = meta_frame_sync_to_window (window->frame,
-                                                     gravity,
-                                                     need_move_frame, need_resize_frame);
+    frame_shape_changed = meta_frame_sync_to_window (window->frame, need_resize_frame);
 
   /* Put gravity back to be nice to lesser window managers */
   if (use_static_gravity)

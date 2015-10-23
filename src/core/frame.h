@@ -65,8 +65,6 @@ void meta_frame_calc_borders      (MetaFrame        *frame,
                                    MetaFrameBorders *borders);
 
 gboolean meta_frame_sync_to_window (MetaFrame         *frame,
-                                    int                gravity,
-                                    gboolean           need_move,
                                     gboolean           need_resize);
 
 cairo_region_t *meta_frame_get_frame_bounds (MetaFrame *frame);

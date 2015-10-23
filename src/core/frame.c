@@ -354,8 +354,6 @@ meta_frame_calc_borders (MetaFrame        *frame,
 
 LOCAL_SYMBOL gboolean
 meta_frame_sync_to_window (MetaFrame *frame,
-                           int        resize_gravity,
-                           gboolean   need_move,
                            gboolean   need_resize)
 {
   meta_topic (META_DEBUG_GEOMETRY,
