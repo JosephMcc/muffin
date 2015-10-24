@@ -25,7 +25,6 @@
 #define META_THEME_PRIVATE_H
 
 #include <meta/boxes.h>
-#include <meta/gradient.h>
 #include <meta/theme.h>
 #include <meta/common.h>
 #include <gtk/gtk.h>
