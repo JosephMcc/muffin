@@ -111,12 +111,6 @@ meta_core_get (Display *xdisplay,
       case META_CORE_GET_CLIENT_XWINDOW:
         *((Window*)answer) = window->xwindow;
         break;
-      case META_CORE_GET_FRAME_FLAGS:
-        *((MetaFrameFlags*)answer) = meta_frame_get_flags (window->frame);
-        break; 
-      case META_CORE_GET_FRAME_TYPE:
-        *((MetaFrameType*)answer) = meta_window_get_frame_type (window);
-        break;
       case META_CORE_GET_MINI_ICON:
         *((GdkPixbuf**)answer) = window->mini_icon;
         break;
