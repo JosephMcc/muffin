@@ -596,7 +596,7 @@ meta_ui_frame_get_borders (MetaUIFrame *frame,
   MetaFrameType type;
   
   flags = meta_frame_get_flags (frame->meta_window->frame);
-  type = meta_window_get_window_type (frame->meta_window);
+  type = meta_window_get_frame_type (frame->meta_window);
 
   g_return_if_fail (type < META_FRAME_TYPE_LAST);
 
@@ -1658,7 +1658,7 @@ get_visible_frame_border_region (MetaUIFrame *frame)
   MetaRectangle frame_rect = frame->meta_window->rect;
 
   flags = meta_frame_get_flags (frame->meta_window->frame);
-  type = meta_window_get_window_type (frame->meta_window);
+  type = meta_window_get_frame_type (frame->meta_window);
 
   meta_theme_get_frame_borders (meta_theme_get_default (), frame->style_info,
                                 type, frame->text_height, flags, 
@@ -1866,7 +1866,7 @@ meta_ui_frame_paint (MetaUIFrame  *frame,
   
   mini_icon = frame->meta_window->mini_icon;
   flags = meta_frame_get_flags (frame->meta_window->frame);
-  type = meta_window_get_window_type (frame->meta_window);
+  type = meta_window_get_frame_type (frame->meta_window);
 
   meta_ui_frame_ensure_layout (frame, type);
 
@@ -2025,7 +2025,7 @@ get_control (MetaUIFrame *frame, int x, int y)
     return META_FRAME_CONTROL_MENU;
 
   flags = meta_frame_get_flags (frame->meta_window->frame);
-  type = meta_window_get_window_type (frame->meta_window);
+  type = meta_window_get_frame_type (frame->meta_window);
 
   has_north_resize = (type != META_FRAME_TYPE_ATTACHED);
   has_vert = (flags & META_FRAME_ALLOWS_VERTICAL_RESIZE) != 0;
