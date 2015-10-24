@@ -95,8 +95,6 @@ struct _MetaFrames
 
   GHashTable *frames;
 
-  MetaUIFrame *last_motion_frame;
-
   MetaStyleInfo *normal_style;
   GHashTable *style_variants;
 };
@@ -141,7 +139,5 @@ void meta_ui_frame_move_resize (MetaUIFrame *frame,
 void meta_ui_frame_queue_draw (MetaUIFrame *frame);
 
 void meta_frames_notify_menu_hide (MetaFrames *frames);
-
-Window meta_frames_get_moving_frame (MetaFrames *frames);
 
 #endif
