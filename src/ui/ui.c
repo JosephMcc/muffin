@@ -325,6 +325,7 @@ set_background_none (Display *xdisplay,
 MetaUIFrame *
 meta_ui_create_frame (MetaUI *ui,
                       Display *xdisplay,
+                      MetaWindow *meta_window,
                       Visual *xvisual,
                       gint x,
                       gint y,
@@ -390,7 +391,7 @@ meta_ui_create_frame (MetaUI *ui,
   gdk_window_resize (window, width, height);
   set_background_none (xdisplay, GDK_WINDOW_XID (window));
   
-  return meta_frames_manage_window (ui->frames, GDK_WINDOW_XID (window), window);
+  return meta_frames_manage_window (ui->frames, meta_window, GDK_WINDOW_XID (window), window);
 }
 
 LOCAL_SYMBOL void
