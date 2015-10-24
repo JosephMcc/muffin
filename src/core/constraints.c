@@ -906,7 +906,7 @@ constrain_maximization (MetaWindow         *window,
             MetaStrut *strut = g_slice_new0 (MetaStrut);
             MetaSide side;
             MetaRectangle rect;
-            meta_window_get_outer_rect (META_WINDOW (tmp->data), &rect);
+            meta_window_get_frame_rect (META_WINDOW (tmp->data), &rect);
             side = meta_window_get_tile_side (META_WINDOW (tmp->data));
             strut->rect = rect;
             strut->side = side;
@@ -996,7 +996,7 @@ constrain_tiling (MetaWindow         *window,
   else
     return TRUE;
 
-  meta_window_get_outer_rect (window, &actual_position);
+  meta_window_get_frame_rect (window, &actual_position);
 
   if (window->custom_snap_size) {
       switch (window->tile_mode) {

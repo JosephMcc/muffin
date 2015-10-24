@@ -326,8 +326,8 @@ find_most_freespace (MetaWindow *window,
   frame_size_top  = borders ? borders->visible.top : 0;
 
   meta_window_get_work_area_current_monitor (focus_window, &work_area);
-  meta_window_get_outer_rect (focus_window, &avoid);
-  meta_window_get_outer_rect (window, &outer);
+  meta_window_get_frame_rect (focus_window, &avoid);
+  meta_window_get_frame_rect (window, &outer);
 
   /* Find the areas of choosing the various sides of the focus window */
   max_width  = MIN (avoid.width, outer.width);
@@ -476,7 +476,7 @@ rectangle_overlaps_some_window (MetaRectangle *rect,
         case META_WINDOW_UTILITY:
         case META_WINDOW_TOOLBAR:
         case META_WINDOW_MENU:
-          meta_window_get_outer_rect (other, &other_rect);
+          meta_window_get_frame_rect (other, &other_rect);
           
           if (meta_rectangle_intersect (rect, &other_rect, &dest))
             return TRUE;
@@ -655,7 +655,7 @@ find_first_fit (MetaWindow *window,
         MetaWindow *w = tmp->data;
         MetaRectangle outer_rect;
 
-        meta_window_get_outer_rect (w, &outer_rect);
+        meta_window_get_frame_rect (w, &outer_rect);
       
         rect.x = outer_rect.x;
         rect.y = outer_rect.y + outer_rect.height;
@@ -686,7 +686,7 @@ find_first_fit (MetaWindow *window,
         MetaWindow *w = tmp->data;
         MetaRectangle outer_rect;
    
-        meta_window_get_outer_rect (w, &outer_rect);
+        meta_window_get_frame_rect (w, &outer_rect);
      
         rect.x = outer_rect.x + outer_rect.width;
         rect.y = outer_rect.y;
@@ -969,7 +969,7 @@ meta_window_place (MetaWindow        *window,
       meta_window_get_work_area_for_monitor (window,
                                              xi->number,
                                              &workarea);      
-      meta_window_get_outer_rect (window, &outer);
+      meta_window_get_frame_rect (window, &outer);
       
       /* If the window is bigger than the screen, then automaximize.  Do NOT
        * auto-maximize the directions independently.  See #419810.

@@ -2109,7 +2109,7 @@ meta_screen_get_monitor_for_window (MetaScreen *screen,
 {
   MetaRectangle window_rect;
   
-  meta_window_get_outer_rect (window, &window_rect);
+  meta_window_get_frame_rect (window, &window_rect);
 
   return meta_screen_get_monitor_for_rect (screen, &window_rect);
 }

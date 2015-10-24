@@ -2314,7 +2314,7 @@ handle_move_to (MetaDisplay    *display,
   int new_x, new_y;
 
   meta_window_get_work_area_all_monitors (window, &work_area);
-  meta_window_get_outer_rect (window, &outer);
+  meta_window_get_frame_rect (window, &outer);
 
   if (direction & META_MOVE_TO_XCHANGE_FLAG) {
     new_x = work_area.x + (direction & META_MOVE_TO_RIGHT_FLAG ?
@@ -2820,8 +2820,8 @@ handle_raise_or_lower (MetaDisplay    *display,
       
       if (above->mapped)
         {
-          meta_window_get_outer_rect (window, &win_rect);
-          meta_window_get_outer_rect (above, &above_rect);
+          meta_window_get_frame_rect (window, &win_rect);
+          meta_window_get_frame_rect (above, &above_rect);
           
           /* Check if obscured */
           if (meta_rectangle_intersect (&win_rect, &above_rect, &tmp))
