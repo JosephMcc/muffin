@@ -239,9 +239,7 @@ struct _MetaTheme
 };
 
 MetaFrameLayout* meta_frame_layout_new           (void);
-MetaFrameLayout* meta_frame_layout_copy          (const MetaFrameLayout *src);
-void             meta_frame_layout_ref           (MetaFrameLayout       *layout);
-void             meta_frame_layout_unref         (MetaFrameLayout       *layout);
+void             meta_frame_layout_free          (MetaFrameLayout       *layout);
 void             meta_frame_layout_get_borders   (const MetaFrameLayout *layout,
                                                   int                    text_height,
                                                   MetaFrameFlags         flags,
