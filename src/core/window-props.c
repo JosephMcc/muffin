@@ -532,9 +532,7 @@ set_window_title (MetaWindow *window,
   g_free (str);
 
   if (window->frame)
-    meta_ui_set_frame_title (window->screen->ui,
-                             window->frame->xwindow,
-                             window->title);
+    meta_frame_update_title (window->frame);
 
   g_object_notify (G_OBJECT (window), "title");
 }

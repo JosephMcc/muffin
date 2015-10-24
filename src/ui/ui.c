@@ -311,25 +311,6 @@ meta_ui_free (MetaUI *ui)
   g_free (ui);
 }
 
-void
-meta_ui_get_frame_mask (MetaUI  *ui,
-                        Window   frame_xwindow,
-                        guint    width,
-                        guint    height,
-                        cairo_t *cr)
-{
-  meta_frames_get_mask (ui->frames, frame_xwindow, width, height, cr);
-}
-
-LOCAL_SYMBOL void
-meta_ui_get_frame_borders (MetaUI *ui,
-                           Window frame_xwindow,
-                           MetaFrameBorders *borders)
-{
-  meta_frames_get_borders (ui->frames, frame_xwindow,
-                           borders);
-}
-
 static void
 set_background_none (Display *xdisplay,
                      Window   xwindow)
@@ -413,24 +394,6 @@ meta_ui_create_frame (MetaUI *ui,
 }
 
 LOCAL_SYMBOL void
-meta_ui_destroy_frame_window (MetaUI *ui,
-			      Window  xwindow)
-{
-  meta_frames_unmanage_window (ui->frames, xwindow);
-}
-
-LOCAL_SYMBOL void
-meta_ui_move_resize_frame (MetaUI *ui,
-			   Window frame,
-			   int x,
-			   int y,
-			   int width,
-			   int height)
-{
-  meta_frames_move_resize_frame (ui->frames, frame, x, y, width, height);
-}
-
-LOCAL_SYMBOL void
 meta_ui_map_frame   (MetaUI *ui,
                      Window  xwindow)
 {
@@ -456,45 +419,6 @@ meta_ui_unmap_frame (MetaUI *ui,
 
   if (window)
     gdk_window_hide (window);
-}
-
-LOCAL_SYMBOL void
-meta_ui_update_frame_style (MetaUI  *ui,
-                            Window   xwindow)
-{
-  meta_frames_update_frame_style (ui->frames, xwindow);
-}
-
-LOCAL_SYMBOL void
-meta_ui_repaint_frame (MetaUI *ui,
-                       Window xwindow)
-{
-  meta_frames_repaint_frame (ui->frames, xwindow);
-}
-
-LOCAL_SYMBOL cairo_region_t *
-meta_ui_get_frame_bounds (MetaUI  *ui,
-                          Window   xwindow,
-                          int      window_width,
-                          int      window_height)
-{
-  return meta_frames_get_frame_bounds (ui->frames, xwindow,
-                                       window_width, window_height);
-}
-
-LOCAL_SYMBOL void
-meta_ui_queue_frame_draw (MetaUI *ui,
-                          Window xwindow)
-{
-  meta_frames_queue_draw (ui->frames, xwindow);
-}
-
-LOCAL_SYMBOL void
-meta_ui_set_frame_title (MetaUI     *ui,
-                         Window      xwindow,
-                         const char *title)
-{
-  meta_frames_set_title (ui->frames, xwindow, title);
 }
 
 LOCAL_SYMBOL MetaWindowMenu*

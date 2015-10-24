@@ -3871,8 +3871,7 @@ meta_window_real_tile (MetaWindow *window, gboolean force)
                                    &new_rect);
 
       if (window->frame)
-        meta_ui_queue_frame_draw (window->screen->ui,
-                                  window->frame->xwindow);
+        meta_frame_queue_draw (window->frame);
     }
   else
     {
