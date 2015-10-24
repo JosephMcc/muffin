@@ -635,21 +635,17 @@ get_client_rect (MetaFrameGeometry     *fgeom,
  */
 static void
 get_visible_frame_rect (MetaFrameGeometry     *fgeom,
-                        int                    window_width,
-                        int                    window_height,
                         cairo_rectangle_int_t *rect)
 {
   rect->x = fgeom->borders.invisible.left;
   rect->y = fgeom->borders.invisible.top;
-  rect->width = window_width - fgeom->borders.invisible.right - rect->x;
-  rect->height = window_height - fgeom->borders.invisible.bottom - rect->y;
+  rect->width = fgeom->width - fgeom->borders.invisible.right - rect->x;
+  rect->height = fgeom->height - fgeom->borders.invisible.bottom - rect->y;
 }
 
 static cairo_region_t *
 get_visible_region (MetaUIFrame       *frame,
-                    MetaFrameGeometry *fgeom,
-                    int                window_width,
-                    int                window_height)
+                    MetaFrameGeometry *fgeom)
 {
   cairo_region_t *corners_region;
   cairo_region_t *visible_region;
@@ -657,7 +653,7 @@ get_visible_region (MetaUIFrame       *frame,
   cairo_rectangle_int_t frame_rect;
 
   corners_region = cairo_region_create ();
-  get_visible_frame_rect (fgeom, window_width, window_height, &frame_rect);
+  get_visible_frame_rect (fgeom, &frame_rect);
   
   if (fgeom->top_left_corner_rounded_radius != 0)
     {
@@ -739,14 +735,12 @@ get_visible_region (MetaUIFrame       *frame,
 }
 
 LOCAL_SYMBOL cairo_region_t *
-meta_ui_frame_get_bounds (MetaUIFrame *frame,
-                          int          window_width,
-                          int          window_height)
+meta_ui_frame_get_bounds (MetaUIFrame *frame)
 {
   MetaFrameGeometry fgeom;
 
   meta_ui_frame_calc_geometry (frame, &fgeom);
-  return get_visible_region (frame, &fgeom, window_width, window_height);
+  return get_visible_region (frame, &fgeom);
 }
 
 LOCAL_SYMBOL void
@@ -1749,22 +1743,20 @@ get_visible_frame_border_region (MetaUIFrame *frame)
  *
  * @frame: This frame
  * @xwindow: The X window for the frame, which has the client window as a child
- * @width: The width of the framed window including any invisible borders
- * @height: The height of the framed window including any invisible borders
  * @cr: Used to draw the resulting mask
  */
 void
 meta_ui_frame_get_mask (MetaUIFrame *frame,
-                        guint        width,
-                        guint        height,
                         cairo_t     *cr)
 {
   MetaFrameBorders borders;
   MetaFrameFlags flags;
+  MetaRectangle frame_rect;
 
   meta_core_get (GDK_DISPLAY_XDISPLAY (gdk_display_get_default ()),
                  frame->xwindow,
                  META_CORE_GET_FRAME_FLAGS, &flags,
+                 META_CORE_GET_FRAME_RECT, &frame_rect,
                  META_CORE_GET_END);
 
   meta_style_info_set_flags (frame->style_info, flags);
@@ -1772,8 +1764,7 @@ meta_ui_frame_get_mask (MetaUIFrame *frame,
 
   gtk_render_background (frame->style_info->styles[META_STYLE_ELEMENT_FRAME], cr,
                          borders.invisible.left, borders.invisible.top,
-                         width - borders.invisible.left - borders.invisible.right,
-                         height - borders.invisible.top - borders.invisible.bottom);
+                         frame_rect.width, frame_rect.height);
 }
 
 /* XXX -- this is disgusting. Find a better approach here.
