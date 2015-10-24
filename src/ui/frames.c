@@ -58,8 +58,6 @@ static gboolean meta_frames_button_release_event  (GtkWidget           *widget,
                                                    GdkEventButton      *event);
 static gboolean meta_frames_motion_notify_event   (GtkWidget           *widget,
                                                    GdkEventMotion      *event);
-static gboolean meta_frames_destroy_event         (GtkWidget           *widget,
-                                                   GdkEventAny         *event);
 static gboolean meta_frames_draw                  (GtkWidget           *widget,
                                                    cairo_t             *cr);
 static gboolean meta_frames_enter_notify_event    (GtkWidget           *widget,
@@ -131,7 +129,6 @@ meta_frames_class_init (MetaFramesClass *class)
   widget_class->unmap = meta_frames_unmap;
   
   widget_class->draw = meta_frames_draw;
-  widget_class->destroy_event = meta_frames_destroy_event;  
   widget_class->button_press_event = meta_frames_button_press_event;
   widget_class->button_release_event = meta_frames_button_release_event;
   widget_class->motion_notify_event = meta_frames_motion_notify_event;
@@ -1628,22 +1625,6 @@ meta_frames_motion_notify_event     (GtkWidget           *widget,
       break;
     }
       
-  return TRUE;
-}
-
-static gboolean
-meta_frames_destroy_event           (GtkWidget           *widget,
-                                     GdkEventAny         *event)
-{
-  MetaUIFrame *frame;
-  MetaFrames *frames;
-
-  frames = META_FRAMES (widget);
-
-  frame = meta_frames_lookup_window (frames, GDK_WINDOW_XID (event->window));
-  if (frame == NULL)
-    return FALSE;
-  
   return TRUE;
 }
 
