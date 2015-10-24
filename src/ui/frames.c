@@ -36,7 +36,6 @@
 #include <meta/prefs.h>
 #include "ui.h"
 
-#include "core/window-private.h"
 #include "core/frame.h"
 
 #include <cairo-xlib.h>
@@ -445,15 +444,10 @@ static void
 meta_ui_frame_calc_geometry (MetaUIFrame       *frame,
                              MetaFrameGeometry *fgeom)
 {
-  int width, height;
   MetaFrameFlags flags;
   MetaFrameType type;
   MetaButtonLayout button_layout;
-  
-  meta_core_get (GDK_DISPLAY_XDISPLAY (gdk_display_get_default ()), frame->xwindow,
-                 META_CORE_GET_CLIENT_WIDTH, &width,
-                 META_CORE_GET_CLIENT_HEIGHT, &height,
-                 META_CORE_GET_END);
+  MetaWindow *window = frame->meta_window;
 
   flags = meta_frame_get_flags (frame->meta_window->frame);
   type = meta_window_get_window_type (frame->meta_window);
@@ -467,7 +461,8 @@ meta_ui_frame_calc_geometry (MetaUIFrame       *frame,
                             type,
                             frame->text_height,
                             flags,
-                            width, height,
+                            window->rect.width,
+                            window->rect.height,
                             &button_layout,
                             fgeom);
 }
@@ -495,17 +490,12 @@ static void
 meta_ui_frame_attach_style (MetaUIFrame *frame)
 {
   MetaFrames *frames = frame->frames;
-  gboolean has_frame;
-  char *variant = NULL;
+  const char *variant;
 
   if (frame->style_info != NULL)
     meta_style_info_unref (frame->style_info);
 
-  meta_core_get (GDK_DISPLAY_XDISPLAY (gdk_display_get_default ()),
-                 frame->xwindow,
-                 META_CORE_WINDOW_HAS_FRAME, &has_frame,
-                 META_CORE_GET_THEME_VARIANT, &variant,
-                 META_CORE_GET_END);
+  variant = frame->meta_window->gtk_theme_variant;
 
   if (variant == NULL || strcmp(variant, "normal") == 0)
     frame->style_info = meta_style_info_ref (frames->normal_style);
@@ -1654,19 +1644,12 @@ meta_frames_destroy_event           (GtkWidget           *widget,
 static cairo_region_t *
 get_visible_frame_border_region (MetaUIFrame *frame)
 {
-  MetaRectangle frame_rect;
   cairo_rectangle_int_t area;
   cairo_region_t *frame_border;
   MetaFrameFlags flags;
   MetaFrameType type;
   MetaFrameBorders borders;
-  Display *display;
-  
-  display = GDK_DISPLAY_XDISPLAY (gdk_display_get_default ());
-
-  meta_core_get (display, frame->xwindow,
-                 META_CORE_GET_FRAME_RECT, &frame_rect,
-                 META_CORE_GET_END);
+  MetaRectangle frame_rect = frame->meta_window->rect;
 
   flags = meta_frame_get_flags (frame->meta_window->frame);
   type = meta_window_get_window_type (frame->meta_window);
@@ -1723,10 +1706,7 @@ meta_ui_frame_get_mask (MetaUIFrame *frame,
   MetaFrameFlags flags;
   MetaRectangle frame_rect;
 
-  meta_core_get (GDK_DISPLAY_XDISPLAY (gdk_display_get_default ()),
-                 frame->xwindow,
-                 META_CORE_GET_FRAME_RECT, &frame_rect,
-                 META_CORE_GET_END);
+  meta_window_get_frame_rect (frame->meta_window, &frame_rect);
 
   flags = meta_frame_get_flags (frame->meta_window->frame);
 
@@ -1787,14 +1767,14 @@ meta_ui_frame_paint (MetaUIFrame  *frame,
   MetaFrameFlags flags;
   MetaFrameType type;
   GdkPixbuf *mini_icon;
-  int w, h;
   MetaButtonState button_states[META_BUTTON_TYPE_LAST];
   Window grab_frame;
   int i;
   MetaButtonLayout button_layout;
   MetaGrabOp grab_op;
+  MetaWindow *window = frame->meta_window;
   Display *display;
-  
+
   display = GDK_DISPLAY_XDISPLAY (gdk_display_get_default ());
 
   for (i = 0; i < META_BUTTON_TYPE_LAST; i++)
@@ -1878,12 +1858,7 @@ meta_ui_frame_paint (MetaUIFrame  *frame,
       break;
     }
   
-  meta_core_get (display, frame->xwindow,
-                 META_CORE_GET_MINI_ICON, &mini_icon,
-                 META_CORE_GET_CLIENT_WIDTH, &w,
-                 META_CORE_GET_CLIENT_HEIGHT, &h,
-                 META_CORE_GET_END);
-
+  mini_icon = frame->meta_window->mini_icon;
   flags = meta_frame_get_flags (frame->meta_window->frame);
   type = meta_window_get_window_type (frame->meta_window);
 
@@ -1896,7 +1871,8 @@ meta_ui_frame_paint (MetaUIFrame  *frame,
                          cr,
                          type,
                          flags,
-                         w, h,
+                         window->rect.width,
+                         window->rect.height,
                          frame->text_layout,
                          frame->text_height,
                          &button_layout,
