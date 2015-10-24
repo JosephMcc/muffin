@@ -49,8 +49,6 @@
 static void meta_frames_destroy       (GtkWidget       *object);
 static void meta_frames_finalize      (GObject         *object);
 static void meta_frames_style_updated (GtkWidget       *widget);
-static void meta_frames_map           (GtkWidget       *widget);
-static void meta_frames_unmap         (GtkWidget       *widget);
 
 static gboolean meta_frames_button_press_event    (GtkWidget           *widget,
                                                    GdkEventButton      *event);
@@ -124,10 +122,7 @@ meta_frames_class_init (MetaFramesClass *class)
   widget_class->destroy = meta_frames_destroy;
 
   widget_class->style_updated = meta_frames_style_updated;
-
-  widget_class->map = meta_frames_map;
-  widget_class->unmap = meta_frames_unmap;
-  
+ 
   widget_class->draw = meta_frames_draw;
   widget_class->button_press_event = meta_frames_button_press_event;
   widget_class->button_release_event = meta_frames_button_release_event;
@@ -451,13 +446,26 @@ LOCAL_SYMBOL MetaFrames*
 meta_frames_new (int screen_number)
 {
   GdkScreen *screen;
+  MetaFrames *frames;
 
   screen = gdk_display_get_screen (gdk_display_get_default (),
                                    screen_number);
 
-  return g_object_new (META_TYPE_FRAMES,
-                       "screen", screen,
-                       NULL);  
+  frames = g_object_new (META_TYPE_FRAMES,
+                         "screen", screen,
+                         "type", GTK_WINDOW_POPUP,
+                         NULL);
+
+  /* Put the window at an arbitrary offscreen location; the one place
+   * it can't be is at -100x-100, since the meta_window_new() will
+   * mistake it for a window created via meta_create_offscreen_window()
+   * and ignore it, and we need this window to get frame-synchronization
+   * messages so that GTK+'s style change handling works.
+   */
+  gtk_window_move (GTK_WINDOW (frames), -200, -200);
+  gtk_window_resize (GTK_WINDOW (frames), 1, 1);
+
+  return frames;
 }
 
 static const char *
@@ -567,22 +575,6 @@ meta_ui_frame_unmanage (MetaUIFrame *frame)
   g_free (frame->title);
 
   g_free (frame);
-}
-
-static void
-meta_frames_map (GtkWidget *widget)
-{
-  /* We override the parent map function to a no-op because we don't
-   * want to actually show the GDK window. But GTK needs to think that
-   * the widget is mapped or it won't deliver the events we care about.
-   */
-  gtk_widget_set_mapped (widget, TRUE);
-}
-
-static void
-meta_frames_unmap (GtkWidget *widget)
-{
-  gtk_widget_set_mapped (widget, FALSE);
 }
 
 void
