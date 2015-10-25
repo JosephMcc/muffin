@@ -7320,7 +7320,9 @@ meta_window_client_message (MetaWindow *window,
             meta_window_raise (window);
           meta_window_focus (window, meta_display_get_current_time_roundtrip (display));
 
-          meta_window_show_menu (window);
+          meta_window_show_menu (window,
+                                 x_root,
+                                 y_root);
         }
     }
 
@@ -8694,10 +8696,12 @@ recalc_window_features (MetaWindow *window)
 }
 
 void
-meta_window_show_menu (MetaWindow *window)
+meta_window_show_menu (MetaWindow *window,
+                       int         x,
+                       int         y)
 {
   g_return_if_fail (!window->override_redirect);
-  meta_compositor_show_window_menu (window->display->compositor, window);
+  meta_compositor_show_window_menu (window->display->compositor, window, x, y);
 }
 
 LOCAL_SYMBOL void

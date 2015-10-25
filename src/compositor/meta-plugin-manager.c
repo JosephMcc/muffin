@@ -398,18 +398,20 @@ meta_plugin_manager_hide_hud_preview (MetaPluginManager *plugin_mgr)
 
 void
 meta_plugin_manager_show_window_menu (MetaPluginManager *plugin_mgr,
-                                      MetaWindow        *window)
+                                      MetaWindow        *window,
+                                      int                x,
+                                      int                y)
 {
   MetaPlugin *plugin = plugin_mgr->plugin;
   MetaPluginClass *klass = META_PLUGIN_GET_CLASS (plugin);
   MetaDisplay *display = meta_screen_get_display (plugin_mgr->screen);
 
   if (display->display_opening)
-    return;
+    return FALSE;
 
   if (klass->show_window_menu)
   {
-      klass->show_window_menu (plugin, window);
+      klass->show_window_menu (plugin, window, x, y);
       return TRUE;
   }
 

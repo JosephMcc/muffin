@@ -117,7 +117,9 @@ struct _MetaPluginClass
   void (*hide_hud_preview) (MetaPlugin         *plugin);
 
   void (*show_window_menu)  (MetaPlugin      *plugin,
-                             MetaWindow      *window);
+                             MetaWindow      *window,
+                             int              x,
+                             int              y);
 
   /*
    * Called if an effects should be killed prematurely; the plugin must

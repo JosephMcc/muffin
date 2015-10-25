@@ -1643,11 +1643,13 @@ meta_compositor_hide_hud_preview (MetaCompositor *compositor,
 
 void
 meta_compositor_show_window_menu (MetaCompositor *compositor,
-                                  MetaWindow     *window)
+                                  MetaWindow     *window,
+                                  int             x,
+                                  int             y)
 {
   MetaScreen      *screen = meta_window_get_screen (window);
   MetaCompScreen  *info = meta_screen_get_compositor_data (screen);
-  meta_plugin_manager_show_window_menu (info->plugin_mgr, window);
+  meta_plugin_manager_show_window_menu (info->plugin_mgr, window, x, y);
 }
 
 /**

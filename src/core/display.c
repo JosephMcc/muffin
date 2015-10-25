@@ -1976,9 +1976,7 @@ event_callback (XEvent   *event,
                 meta_window_raise (window);
               meta_window_show_menu (window,
                                      event->xbutton.x_root,
-                                     event->xbutton.y_root,
-                                     event->xbutton.button,
-                                     event->xbutton.time);
+                                     event->xbutton.y_root);
             }
 
           if (!frame_was_receiver && unmodified)

@@ -193,6 +193,8 @@ void meta_compositor_hide_hud_preview (MetaCompositor   *compositor,
                                        MetaScreen       *screen);
 
 void meta_compositor_show_window_menu (MetaCompositor *compositor,
-                                       MetaWindow     *window);
+                                       MetaWindow     *window,
+                                       int             x,
+                                       int             y);
 
 #endif /* META_COMPOSITOR_H */
