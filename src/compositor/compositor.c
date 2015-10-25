@@ -1036,11 +1036,9 @@ meta_compositor_switch_workspace (MetaCompositor     *compositor,
 
   info->switch_workspace_in_progress++;
 
-  if (!info->plugin_mgr ||
-      !meta_plugin_manager_switch_workspace (info->plugin_mgr,
-					       from_indx,
-					       to_indx,
-					       direction))
+  if (!meta_plugin_manager_switch_workspace (info->plugin_mgr,
+                                             from_indx, to_indx,
+                                             direction))
     {
       info->switch_workspace_in_progress--;
 
@@ -1608,10 +1606,6 @@ meta_compositor_show_tile_preview (MetaCompositor *compositor,
                                    guint          snap_queued)
 {
     MetaCompScreen *info = meta_screen_get_compositor_data (screen);
-
-    if (!info->plugin_mgr)
-        return;
-
     meta_plugin_manager_show_tile_preview (info->plugin_mgr,
                                            window, tile_rect, tile_monitor_number,
                                            snap_queued);
@@ -1622,10 +1616,6 @@ meta_compositor_hide_tile_preview (MetaCompositor *compositor,
                                    MetaScreen     *screen)
 {
     MetaCompScreen *info = meta_screen_get_compositor_data (screen);
-
-    if (!info->plugin_mgr)
-        return;
-
     meta_plugin_manager_hide_tile_preview (info->plugin_mgr);
 }
 
@@ -1637,10 +1627,6 @@ meta_compositor_show_hud_preview (MetaCompositor *compositor,
                                   guint          snap_queued)
 {
     MetaCompScreen *info = meta_screen_get_compositor_data (screen);
-
-    if (!info->plugin_mgr)
-        return;
-
     meta_plugin_manager_show_hud_preview (info->plugin_mgr,
                                           current_proximity_zone,
                                           work_area,
@@ -1652,11 +1638,16 @@ meta_compositor_hide_hud_preview (MetaCompositor *compositor,
                                   MetaScreen     *screen)
 {
     MetaCompScreen *info = meta_screen_get_compositor_data (screen);
-
-    if (!info->plugin_mgr)
-        return;
-
     meta_plugin_manager_hide_hud_preview (info->plugin_mgr);
+}
+
+void
+meta_compositor_show_window_menu (MetaCompositor *compositor,
+                                  MetaWindow     *window)
+{
+  MetaScreen      *screen = meta_window_get_screen (window);
+  MetaCompScreen  *info = meta_screen_get_compositor_data (screen);
+  meta_plugin_manager_show_window_menu (info->plugin_mgr, window);
 }
 
 /**

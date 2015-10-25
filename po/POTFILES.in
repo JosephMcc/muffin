@@ -19,8 +19,6 @@ src/core/xprops.c
 src/muffin.desktop.in
 src/org.cinnamon.muffin.gschema.xml.in
 src/ui/frames.c
-src/ui/menu.c
-src/ui/metaaccellabel.c
 src/ui/resizepopup.c
 src/ui/theme.c
 

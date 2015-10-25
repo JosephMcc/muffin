@@ -2344,43 +2344,6 @@ meta_prefs_get_keybinding_action (const char *name)
               : META_KEYBINDING_ACTION_NONE;
 }
 
-/* This is used by the menu system to decide what key binding
- * to display next to an option. We return the first non-disabled
- * binding, if any.
- */
-void
-meta_prefs_get_window_binding (const char          *name,
-                               unsigned int        *keysym,
-                               MetaVirtualModifier *modifiers)
-{
-  MetaKeyPref *pref = g_hash_table_lookup (key_bindings, name);
-
-  if (pref->per_window)
-    {
-      GSList *s = pref->bindings;
-
-      while (s)
-        {
-          MetaKeyCombo *c = s->data;
-
-          if (c->keysym != 0 || c->modifiers != 0)
-            {
-              *keysym = c->keysym;
-              *modifiers = c->modifiers;
-              return;
-            }
-
-          s = s->next;
-        }
-
-      /* Not found; return the disabled value */
-      *keysym = *modifiers = 0;
-      return;
-    }
-
-  g_assert_not_reached ();
-}
-
 guint
 meta_prefs_get_mouse_button_resize (void)
 {

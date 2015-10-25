@@ -129,13 +129,8 @@ libmuffin_la_SOURCES =				\
 	meta/common.h				\
 	core/core.h				\
 	ui/ui.h					\
-	inlinepixbufs.h				\
 	ui/frames.c				\
 	ui/frames.h				\
-	ui/menu.c				\
-	ui/menu.h				\
-	ui/metaaccellabel.c			\
-	ui/metaaccellabel.h			\
 	ui/resizepopup.c			\
 	ui/resizepopup.h			\
 	ui/theme.c				\
@@ -250,23 +245,13 @@ gsettings_SCHEMAS = org.cinnamon.muffin.gschema.xml
 @INTLTOOL_XML_NOMERGE_RULE@
 @GSETTINGS_RULES@
 
-IMAGES=stock_maximize.png stock_minimize.png stock_delete.png
-VARIABLES=stock_maximize_data $(srcdir)/stock_maximize.png \
-		  stock_minimize_data $(srcdir)/stock_minimize.png \
-		  stock_delete_data $(srcdir)/stock_delete.png
-
-BUILT_SOURCES = inlinepixbufs.h
 CLEANFILES =					\
-	inlinepixbufs.h				\
 	muffin.desktop				\
 	org.cinnamon.muffin.gschema.xml		\
 	$(xml_DATA)				\
 	$(muffin_built_sources)			\
 	$(typelib_DATA)				\
 	$(gir_DATA)
-
-inlinepixbufs.h: $(IMAGES)
-	$(GDK_PIXBUF_CSOURCE) --raw --build-list $(VARIABLES) >$(srcdir)/inlinepixbufs.h
 
 pkgconfigdir = $(libdir)/pkgconfig
 
@@ -282,7 +267,7 @@ EXTRA_DIST=$(desktopfiles_files) 	\
 	muffin-enum-types.h.in \
 	muffin-enum-types.c.in
 
-BUILT_SOURCES += $(muffin_built_sources)
+BUILT_SOURCES = $(muffin_built_sources)
 MUFFIN_STAMP_FILES = stamp-muffin-enum-types.h
 CLEANFILES += $(MUFFIN_STAMP_FILES)
 
