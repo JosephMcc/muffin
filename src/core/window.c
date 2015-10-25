@@ -8997,7 +8997,7 @@ meta_window_show_menu (MetaWindow *window,
   meta_ui_window_menu_popup (menu, root_x, root_y, button, timestamp);
 }
 
-LOCAL_SYMBOL void
+void
 meta_window_shove_titlebar_onscreen (MetaWindow *window)
 {
   MetaRectangle  outer_rect;
@@ -9045,7 +9045,7 @@ meta_window_shove_titlebar_onscreen (MetaWindow *window)
                            window->rect.height);
 }
 
-LOCAL_SYMBOL gboolean
+gboolean
 meta_window_titlebar_is_onscreen (MetaWindow *window)
 {
   MetaRectangle  titlebar_rect;
@@ -12086,4 +12086,52 @@ meta_window_tile (MetaWindow *window,
   }
 
   return TRUE;
+}
+
+gboolean
+meta_window_can_maximize (MetaWindow *window)
+{
+  return window->has_maximize_func;
+}
+
+gboolean
+meta_window_can_minimize (MetaWindow *window)
+{
+  return window->has_minimize_func;
+}
+
+gboolean
+meta_window_can_shade (MetaWindow *window)
+{
+  return window->has_shade_func;
+}
+
+gboolean
+meta_window_can_close (MetaWindow *window)
+{
+  return window->has_close_func;
+}
+
+gboolean
+meta_window_is_always_on_all_workspaces (MetaWindow *window)
+{
+  return window->always_sticky;
+}
+
+gboolean
+meta_window_is_above (MetaWindow *window)
+{
+  return window->wm_state_above;
+}
+
+gboolean
+meta_window_allows_move (MetaWindow *window)
+{
+  return META_WINDOW_ALLOWS_MOVE (window);
+}
+
+gboolean
+meta_window_allows_resize (MetaWindow *window)
+{
+  return META_WINDOW_ALLOWS_MOVE (window);
 }

@@ -187,7 +187,22 @@ cairo_region_t *meta_window_get_frame_bounds (MetaWindow *window);
 
 MetaWindow *meta_window_get_tile_match (MetaWindow *window);
 
-gboolean meta_window_can_tile (MetaWindow *window, MetaTileMode mode);
-gboolean meta_window_tile (MetaWindow *window, MetaTileMode mode, gboolean snap);
+gboolean meta_window_can_tile (MetaWindow *window,
+                               MetaTileMode mode);
+gboolean meta_window_tile (MetaWindow *window,
+                           MetaTileMode mode,
+                           gboolean snap);
+
+gboolean meta_window_can_maximize (MetaWindow *window);
+gboolean meta_window_can_minimize (MetaWindow *window);
+gboolean meta_window_can_shade (MetaWindow *window);
+gboolean meta_window_can_close (MetaWindow *window);
+gboolean meta_window_is_always_on_all_workspaces (MetaWindow *window);
+gboolean meta_window_is_above (MetaWindow *window);
+gboolean meta_window_allows_move (MetaWindow *window);
+gboolean meta_window_allows_resize (MetaWindow *window);
+
+gboolean meta_window_titlebar_is_onscreen    (MetaWindow *window);
+void     meta_window_shove_titlebar_onscreen (MetaWindow *window);
 
 #endif
