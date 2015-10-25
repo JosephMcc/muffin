@@ -4010,6 +4010,7 @@ meta_window_unmaximize_internal (MetaWindow        *window,
                                  int                gravity)
 {
   gboolean unmaximize_horizontally, unmaximize_vertically;
+
   g_return_if_fail (!window->override_redirect);
 
   /* At least one of the two directions ought to be set */
@@ -4029,8 +4030,10 @@ meta_window_unmaximize_internal (MetaWindow        *window,
     {
       MetaRectangle target_rect;
       MetaRectangle work_area;
+      MetaRectangle old_rect;
 
       meta_window_get_work_area_for_monitor (window, window->monitor->number, &work_area);
+      meta_window_get_frame_rect (window, &old_rect);
 
       meta_topic (META_DEBUG_WINDOW_OPS,
                   "Unmaximizing %s%s\n",
@@ -4043,6 +4046,13 @@ meta_window_unmaximize_internal (MetaWindow        *window,
         window->maximized_horizontally && !unmaximize_horizontally;
       window->maximized_vertically =
         window->maximized_vertically   && !unmaximize_vertically;
+
+      /* recalc_window_features() will eventually clear the cached frame
+       * extents, but we need the correct frame extents in the code below,
+       * so invalidate the old frame extents manually up front.
+       */
+
+      meta_window_frame_size_changed (window);
 
       /* Unmaximize to the saved_rect position in the direction(s)
        * being unmaximized.
@@ -4067,9 +4077,7 @@ meta_window_unmaximize_internal (MetaWindow        *window,
 
       if (window->display->compositor && window->resizing_tile_type == META_WINDOW_TILE_TYPE_NONE)
         {
-          MetaRectangle old_rect, new_rect;
-
-	  meta_window_get_frame_rect (window, &old_rect);
+          MetaRectangle new_rect;
 
           meta_window_move_resize_internal (window,
                                             META_IS_MOVE_ACTION | META_IS_RESIZE_ACTION,
@@ -4079,11 +4087,11 @@ meta_window_unmaximize_internal (MetaWindow        *window,
                                             target_rect.width,
                                             target_rect.height);
 
-	  meta_window_get_frame_rect (window, &new_rect);
+          meta_window_get_frame_rect (window, &new_rect);
           meta_compositor_unmaximize_window (window->display->compositor,
-					     window,
+                                             window,
                                              &old_rect,
-					     &new_rect);
+                                             &new_rect);
         }
       else
         {
