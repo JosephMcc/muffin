@@ -676,10 +676,8 @@ void     meta_window_set_current_workspace_hint (MetaWindow *window);
 unsigned long meta_window_get_net_wm_desktop (MetaWindow *window);
 
 void meta_window_show_menu (MetaWindow *window,
-                            int         root_x,
-                            int         root_y,
-                            int         button,
-                            guint32     timestamp);
+                            int         x,
+                            int         y);
 
 void meta_window_set_gravity (MetaWindow *window,
                               int         gravity);

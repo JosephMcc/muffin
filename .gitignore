@@ -69,7 +69,6 @@ src/compositor/plugins/default_la-default.o
 src/core/.deps/
 src/core/.dirstamp
 src/core/.libs/
-src/inlinepixbufs.h
 src/libmuffin.la
 src/libmuffin.pc
 src/muffin

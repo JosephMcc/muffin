@@ -30,7 +30,6 @@
 #include "frames.h"
 #include <meta/util.h>
 #include "core.h"
-#include "menu.h"
 #include "window-private.h"
 #include <meta/theme.h>
 #include <meta/prefs.h>
@@ -901,7 +900,6 @@ meta_frame_titlebar_event (MetaUIFrame    *frame,
                                   frame->xwindow,
                                   event->x_root,
                                   event->y_root,
-                                  event->button,
                                   event->time);
       break;
 
@@ -1161,7 +1159,6 @@ meta_frames_button_press_event (GtkWidget      *widget,
                                       frame->xwindow,
                                       rect->x + dx,
                                       rect->y + rect->height + dy,
-                                      event->button,
                                       event->time);
         }
     }

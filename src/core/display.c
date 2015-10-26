@@ -544,9 +544,6 @@ meta_display_open (void)
   the_display->monitor_cache_invalidated = TRUE;
 
   the_display->groups_by_leader = NULL;
-
-  the_display->window_with_menu = NULL;
-  the_display->window_menu = NULL;
   
   the_display->screens = NULL;
   the_display->active_screen = NULL;
@@ -1979,9 +1976,7 @@ event_callback (XEvent   *event,
                 meta_window_raise (window);
               meta_window_show_menu (window,
                                      event->xbutton.x_root,
-                                     event->xbutton.y_root,
-                                     event->xbutton.button,
-                                     event->xbutton.time);
+                                     event->xbutton.y_root);
             }
 
           if (!frame_was_receiver && unmodified)

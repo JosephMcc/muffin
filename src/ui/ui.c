@@ -4,7 +4,6 @@
 
 /* 
  * Copyright (C) 2002 Havoc Pennington
- * stock icon code Copyright (C) 2002 Jorn Baayen <jorn@nl.linux.org>
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -27,17 +26,13 @@
 #include "ui.h"
 #include "frames.h"
 #include <meta/util.h>
-#include "menu.h"
 #include "core.h"
 #include "theme-private.h"
-
-#include "inlinepixbufs.h"
 
 #include <string.h>
 #include <stdlib.h>
 #include <cairo-xlib.h>
 
-static void meta_stock_icons_init (void);
 static void meta_ui_accelerator_parse (const char      *accel,
                                        guint           *keysym,
                                        guint           *keycode,
@@ -75,8 +70,6 @@ meta_ui_init (void)
 + that Gdk reports corresponds to the X ones, so we disable the automatic
 + scale handling */
   gdk_x11_display_set_window_scale (gdk_display_get_default (), 1);
-
-  meta_stock_icons_init ();
 }
 
 LOCAL_SYMBOL Display*
@@ -423,40 +416,6 @@ meta_ui_unmap_frame (MetaUI *ui,
 
   if (window)
     gdk_window_hide (window);
-}
-
-LOCAL_SYMBOL MetaWindowMenu*
-meta_ui_window_menu_new  (MetaUI             *ui,
-                          Window              client_xwindow,
-                          MetaMenuOp          ops,
-                          MetaMenuOp          insensitive,
-                          unsigned long       active_workspace,
-                          int                 n_workspaces,
-                          MetaWindowMenuFunc  func,
-                          gpointer            data)
-{
-  return meta_window_menu_new (ui->frames,
-                               ops, insensitive,
-                               client_xwindow,
-                               active_workspace,
-                               n_workspaces,
-                               func, data);
-}
-
-LOCAL_SYMBOL void
-meta_ui_window_menu_popup (MetaWindowMenu     *menu,
-                           int                 root_x,
-                           int                 root_y,
-                           int                 button,
-                           guint32             timestamp)
-{
-  meta_window_menu_popup (menu, root_x, root_y, button, timestamp);
-}
-
-LOCAL_SYMBOL void
-meta_ui_window_menu_free (MetaWindowMenu *menu)
-{
-  meta_window_menu_free (menu);
 }
 
 LOCAL_SYMBOL GdkPixbuf*
@@ -877,48 +836,6 @@ meta_ui_window_is_widget (MetaUI *ui,
     }
   else
     return FALSE;
-}
-
-/* stock icon code Copyright (C) 2002 Jorn Baayen <jorn@nl.linux.org> */
-typedef struct
-{
-  char *stock_id;
-  const guint8 *icon_data;
-} MetaStockIcon;
-
-static void
-meta_stock_icons_init (void)
-{
-  GtkIconFactory *factory;
-  int i;
-
-  MetaStockIcon items[] =
-  {
-    { METACITY_STOCK_DELETE,   stock_delete_data   },
-    { METACITY_STOCK_MINIMIZE, stock_minimize_data },
-    { METACITY_STOCK_MAXIMIZE, stock_maximize_data }
-  };
-
-  factory = gtk_icon_factory_new ();
-  gtk_icon_factory_add_default (factory);
-
-  for (i = 0; i < (gint) G_N_ELEMENTS (items); i++)
-    {
-      GtkIconSet *icon_set;
-      GdkPixbuf *pixbuf;
-
-      pixbuf = gdk_pixbuf_new_from_inline (-1, items[i].icon_data,
-					   FALSE,
-					   NULL);
-
-      icon_set = gtk_icon_set_new_from_pixbuf (pixbuf);
-      gtk_icon_factory_add (factory, items[i].stock_id, icon_set);
-      gtk_icon_set_unref (icon_set);
-      
-      g_object_unref (G_OBJECT (pixbuf));
-    }
-
-  g_object_unref (G_OBJECT (factory));
 }
 
 LOCAL_SYMBOL MetaUIDirection
