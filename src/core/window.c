@@ -4181,7 +4181,7 @@ meta_window_unmaximize_with_gravity (MetaWindow        *window,
   meta_window_unmaximize_internal (window, directions, &desired_rect, gravity);
 }
 
-LOCAL_SYMBOL void
+void
 meta_window_make_above (MetaWindow  *window)
 {
   g_return_if_fail (!window->override_redirect);
@@ -4190,7 +4190,7 @@ meta_window_make_above (MetaWindow  *window)
   meta_window_raise (window);
 }
 
-LOCAL_SYMBOL void
+void
 meta_window_unmake_above (MetaWindow  *window)
 {
   g_return_if_fail (!window->override_redirect);
@@ -4251,7 +4251,7 @@ meta_window_make_fullscreen_internal (MetaWindow  *window)
     }
 }
 
-LOCAL_SYMBOL void
+void
 meta_window_make_fullscreen (MetaWindow  *window)
 {
   g_return_if_fail (!window->override_redirect);
@@ -4265,7 +4265,7 @@ meta_window_make_fullscreen (MetaWindow  *window)
     }
 }
 
-LOCAL_SYMBOL void
+void
 meta_window_unmake_fullscreen (MetaWindow  *window)
 {
   g_return_if_fail (!window->override_redirect);
@@ -4336,7 +4336,7 @@ meta_window_update_fullscreen_monitors (MetaWindow    *window,
     }
 }
 
-LOCAL_SYMBOL void
+void
 meta_window_shade (MetaWindow  *window,
                    guint32      timestamp)
 {
@@ -4363,7 +4363,7 @@ meta_window_shade (MetaWindow  *window,
     }
 }
 
-LOCAL_SYMBOL void
+void
 meta_window_unshade (MetaWindow  *window,
                      guint32      timestamp)
 {
@@ -4389,7 +4389,7 @@ meta_window_unshade (MetaWindow  *window,
 
 #define OPACITY_STEP 32
 
-LOCAL_SYMBOL void
+void
 meta_window_adjust_opacity (MetaWindow   *window,
                             gboolean      increase)
 {
@@ -6102,7 +6102,7 @@ get_modal_transient (MetaWindow *window)
 }
 
 /* XXX META_EFFECT_FOCUS */
-LOCAL_SYMBOL void
+void
 meta_window_focus (MetaWindow  *window,
                    guint32      timestamp)
 {
@@ -10353,7 +10353,14 @@ get_work_area_monitor (MetaWindow    *window,
               area->x, area->y, area->width, area->height);
 }
 
-LOCAL_SYMBOL void
+/**
+ * meta_window_get_work_area_current_monitor:
+ * @window: a #MetaWindow
+ * @area: (out): a location to store the work area
+ *
+ * Get the work area for the monitor @window is currently on.
+ */
+void
 meta_window_get_work_area_current_monitor (MetaWindow    *window,
                                            MetaRectangle *area)
 {
@@ -10366,7 +10373,16 @@ meta_window_get_work_area_current_monitor (MetaWindow    *window,
                                          area);
 }
 
-LOCAL_SYMBOL void
+/**
+ * meta_window_get_work_area_for_monitor:
+ * @window: a #MetaWindow
+ * @which_monitor: a moniotr to get the work area for
+ * @area: (out): a location to store the work area
+ *
+ * Get the work area for @window, given the monitor index
+ * @which_monitor.
+ */
+void
 meta_window_get_work_area_for_monitor (MetaWindow    *window,
                                        int            which_monitor,
                                        MetaRectangle *area)
@@ -10378,7 +10394,14 @@ meta_window_get_work_area_for_monitor (MetaWindow    *window,
                          which_monitor);
 }
 
-LOCAL_SYMBOL void
+/**
+ * meta_window_get_work_area_all_monitors:
+ * @window: a #MetaWindow
+ * @area: (out): a location to store the work area
+ *
+ * Get the work area for all monitors for @window.
+ */
+void
 meta_window_get_work_area_all_monitors (MetaWindow    *window,
                                         MetaRectangle *area)
 {

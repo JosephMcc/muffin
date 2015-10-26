@@ -120,8 +120,6 @@ void meta_window_change_workspace_by_index (MetaWindow *window,
                                             guint32     timestamp);
 void meta_window_change_workspace (MetaWindow    *window,
                                     MetaWorkspace *workspace);
-void meta_window_stick (MetaWindow  *window);
-void meta_window_unstick (MetaWindow  *window);
 GObject *meta_window_get_compositor_private (MetaWindow *window);
 void meta_window_set_compositor_private (MetaWindow *window, GObject *priv);
 void meta_window_configure_notify (MetaWindow *window, XConfigureEvent *event);
@@ -192,6 +190,36 @@ gboolean meta_window_can_tile (MetaWindow *window,
 gboolean meta_window_tile (MetaWindow *window,
                            MetaTileMode mode,
                            gboolean snap);
+
+void        meta_window_make_fullscreen    (MetaWindow  *window);
+void        meta_window_unmake_fullscreen  (MetaWindow  *window);
+void        meta_window_make_above         (MetaWindow  *window);
+void        meta_window_unmake_above       (MetaWindow  *window);
+void        meta_window_shade              (MetaWindow  *window,
+                                            guint32      timestamp);
+void        meta_window_unshade            (MetaWindow  *window,
+                                            guint32      timestamp);
+void        meta_window_adjust_opacity     (MetaWindow  *window,
+                                            gboolean     increase);
+void        meta_window_stick              (MetaWindow  *window);
+void        meta_window_unstick            (MetaWindow  *window);
+
+void        meta_window_kill               (MetaWindow  *window);
+void        meta_window_focus              (MetaWindow  *window,
+                                            guint32      timestamp);
+
+void meta_window_get_work_area_current_monitor (MetaWindow    *window,
+                                                MetaRectangle *area);
+void meta_window_get_work_area_for_monitor     (MetaWindow    *window,
+                                                int            which_monitor,
+                                                MetaRectangle *area);
+void meta_window_get_work_area_all_monitors    (MetaWindow    *window,
+                                                MetaRectangle *area);
+
+void meta_window_begin_grab_op (MetaWindow *window,
+                                MetaGrabOp  op,
+                                gboolean    frame_action,
+                                guint32     timestamp);
 
 gboolean meta_window_can_maximize (MetaWindow *window);
 gboolean meta_window_can_minimize (MetaWindow *window);
