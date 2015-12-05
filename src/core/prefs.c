@@ -1612,8 +1612,11 @@ button_layout_handler (GVariant *value,
       g_strfreev (buttons);
     }
 
-  new_layout.left_buttons[i] = META_BUTTON_FUNCTION_LAST;
-  new_layout.left_buttons_has_spacer[i] = FALSE;
+  for (; i < MAX_BUTTONS_PER_CORNER; i++)
+    {
+      new_layout.left_buttons[i] = META_BUTTON_FUNCTION_LAST;
+      new_layout.left_buttons_has_spacer[i] = FALSE;
+    }
 
   i = 0;
   if (sides != NULL && sides[0] != NULL && sides[1] != NULL)
@@ -1671,8 +1674,11 @@ button_layout_handler (GVariant *value,
       g_strfreev (buttons);
     }
 
-  new_layout.right_buttons[i] = META_BUTTON_FUNCTION_LAST;
-  new_layout.right_buttons_has_spacer[i] = FALSE;
+  for (; i < MAX_BUTTONS_PER_CORNER; i++)
+    {
+      new_layout.right_buttons[i] = META_BUTTON_FUNCTION_LAST;
+      new_layout.right_buttons_has_spacer[i] = FALSE;
+    }
 
   g_strfreev (sides);
   
@@ -1691,8 +1697,11 @@ button_layout_handler (GVariant *value,
         else
           rtl_layout.right_buttons_has_spacer[j - 1] = new_layout.left_buttons_has_spacer[i - j - 1];
       }
-    rtl_layout.right_buttons[j] = META_BUTTON_FUNCTION_LAST;
-    rtl_layout.right_buttons_has_spacer[j] = FALSE;
+    for (; j < MAX_BUTTONS_PER_CORNER; j++)
+      {
+        rtl_layout.right_buttons[j] = META_BUTTON_FUNCTION_LAST;
+        rtl_layout.right_buttons_has_spacer[j] = FALSE;
+      }
       
     for (i = 0; new_layout.right_buttons[i] != META_BUTTON_FUNCTION_LAST; i++);
     for (j = 0; j < i; j++)
@@ -1703,8 +1712,11 @@ button_layout_handler (GVariant *value,
         else
           rtl_layout.left_buttons_has_spacer[j - 1] = new_layout.right_buttons_has_spacer[i - j - 1];
       }
-    rtl_layout.left_buttons[j] = META_BUTTON_FUNCTION_LAST;
-    rtl_layout.left_buttons_has_spacer[j] = FALSE;
+    for (; j < MAX_BUTTONS_PER_CORNER; j++)
+      {
+        rtl_layout.left_buttons[j] = META_BUTTON_FUNCTION_LAST;
+        rtl_layout.left_buttons_has_spacer[j] = FALSE;
+      }
 
     new_layout = rtl_layout;
   }
@@ -2150,6 +2162,10 @@ meta_prefs_change_workspace_name (int         num,
                         g_variant_builder_end (&builder));
 }
 
+/**
+ * meta_prefs_get_button_layout:
+ * @button_layout: (out):
+ */
 void
 meta_prefs_get_button_layout (MetaButtonLayout *button_layout_p)
 {

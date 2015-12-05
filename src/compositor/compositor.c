@@ -661,7 +661,6 @@ meta_compositor_manage_screen (MetaCompositor *compositor,
   info->bottom_window_group = clutter_group_new();
   info->overlay_group = clutter_group_new ();
   info->top_window_group = meta_window_group_new (screen);
-  info->hidden_group = clutter_group_new ();
 
   clutter_container_add (CLUTTER_CONTAINER (info->window_group),
                          info->background_actor,
@@ -670,10 +669,7 @@ meta_compositor_manage_screen (MetaCompositor *compositor,
   clutter_container_add (CLUTTER_CONTAINER (info->stage),
                          info->window_group,
                          info->overlay_group,
-			 info->hidden_group,
                          NULL);
-
-  clutter_actor_hide (info->hidden_group);
 
   info->plugin_mgr = meta_plugin_manager_new (screen);
 
@@ -861,6 +857,9 @@ meta_compositor_window_shape_changed (MetaCompositor *compositor,
 {
   MetaWindowActor *window_actor;
   window_actor = META_WINDOW_ACTOR (meta_window_get_compositor_private (window));
+  if (!window_actor)
+    return;
+
   meta_window_actor_update_shape (window_actor);
 }
 
@@ -1071,8 +1070,10 @@ static void
 sync_actor_stacking (MetaCompScreen *info)
 {
   GList *children;
+  GList *expected_window_node;
   GList *tmp;
   GList *old;
+  gboolean has_windows;
   gboolean reordered;
 
   /* NB: The first entries in the lists are stacked the lowest */
@@ -1084,49 +1085,41 @@ sync_actor_stacking (MetaCompScreen *info)
   children = clutter_container_get_children (CLUTTER_CONTAINER (info->window_group));
   reordered = FALSE;
 
-  old = children;
-
   /* We allow for actors in the window group other than the actors we
    * know about, but it's up to a plugin to try and keep them stacked correctly
    * (we really need extra API to make that reliable.)
    */
 
-  /* Of the actors we know, the bottom actor should be the background actor */
-
-  while (old && old->data != info->background_actor && !META_IS_WINDOW_ACTOR (old->data))
-    old = old->next;
-  if (old == NULL || old->data != info->background_actor)
+  /* First we check if the background is at the bottom. Then
+   * we check if the window actors are in the correct sequence */
+  expected_window_node = info->windows;
+  for (old = children; old != NULL; old = old->next)
     {
-      reordered = TRUE;
-      goto done_with_check;
-    }
+      ClutterActor *actor = old->data;
 
-  /* Then the window actors should follow in sequence */
-
-  old = old->next;
-  for (tmp = info->windows; tmp != NULL; tmp = tmp->next)
-    {
-      while (old && !META_IS_WINDOW_ACTOR (old->data))
-        old = old->next;
-
-      /* old == NULL: someone reparented a window out of the window group,
-       * order undefined, always restack */
-      if (old == NULL || old->data != tmp->data)
+      if (actor == info->background_actor)
         {
-          reordered = TRUE;
-          goto done_with_check;
+          if (has_windows)
+            reordered = TRUE;
         }
+      else if (META_IS_WINDOW_ACTOR (actor) && !reordered)
+        {
+          has_windows = TRUE;
 
-      old = old->next;
+          if (expected_window_node != NULL && actor == expected_window_node->data)
+            expected_window_node = expected_window_node->next;
+          else
+            reordered = TRUE;
+        }
     }
-
- done_with_check:
 
   g_list_free (children);
 
   if (!reordered)
     return;
 
+  /* reorder the actors by lowering them in turn to the bottom of the stack.
+   * windows first, then background */
   for (tmp = g_list_last (info->windows); tmp != NULL; tmp = tmp->prev)
     {
       MetaWindowActor *window_actor = tmp->data;
@@ -1467,7 +1460,6 @@ meta_compositor_new (MetaDisplay *display)
 {
   char *atom_names[] = {
     "_XROOTPMAP_ID",
-    "_XSETROOT_ID",
     "_NET_WM_WINDOW_OPACITY",
   };
   Atom                   atoms[G_N_ELEMENTS(atom_names)];
@@ -1494,8 +1486,7 @@ meta_compositor_new (MetaDisplay *display)
                     compositor);
 
   compositor->atom_x_root_pixmap = atoms[0];
-  compositor->atom_x_set_root = atoms[1];
-  compositor->atom_net_wm_window_opacity = atoms[2];
+  compositor->atom_net_wm_window_opacity = atoms[1];
 
   compositor->pre_paint_func_id =
     clutter_threads_add_repaint_func_full (CLUTTER_REPAINT_FLAGS_PRE_PAINT,
