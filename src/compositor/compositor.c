@@ -68,10 +68,11 @@
 #include "xprops.h"
 #include <meta/prefs.h>
 #include <meta/main.h>
+#include <meta/meta-background-actor.h>
+#include <meta/meta-background-group.h>
 #include <meta/meta-shadow-factory.h>
 #include "meta-window-actor-private.h"
 #include "meta-window-group.h"
-#include "meta-background-actor-private.h"
 #include "window-private.h" /* to check window->hidden */
 #include "display-private.h" /* for meta_display_lookup_x_window() */
 #include <X11/extensions/shape.h>
@@ -178,21 +179,6 @@ process_property_notify (MetaCompositor	*compositor,
                          MetaWindow     *window)
 {
   MetaWindowActor *window_actor;
-
-  if (event->atom == compositor->atom_x_root_pixmap)
-    {
-      GSList *l;
-
-      for (l = meta_display_get_screens (compositor->display); l; l = l->next)
-        {
-	  MetaScreen  *screen = l->data;
-          if (event->window == meta_screen_get_xroot (screen))
-            {
-              meta_background_actor_update (screen);
-              return;
-            }
-        }
-    }
 
   if (window == NULL)
     return;
@@ -326,27 +312,6 @@ meta_get_top_window_group_for_screen (MetaScreen *screen)
     return NULL;
 
   return info->top_window_group;
-}
-
-/**
- * meta_get_background_actor_for_screen:
- * @screen: a #MetaScreen
- *
- * Gets the actor that draws the root window background under the windows.
- * The root window background automatically tracks the image or color set
- * by the environment.
- *
- * Returns: (transfer none): The background actor corresponding to @screen
- */
-ClutterActor *
-meta_get_background_actor_for_screen (MetaScreen *screen)
-{
-  MetaCompScreen *info = meta_screen_get_compositor_data (screen);
-
-  if (!info)
-    return NULL;
-
-  return info->background_actor;
 }
 
 /**
@@ -549,25 +514,31 @@ after_stage_paint (ClutterStage *stage,
     meta_window_actor_post_paint (l->data);
 }
 
-void
-meta_compositor_manage_screen (MetaCompositor *compositor,
-                               MetaScreen     *screen)
+static void
+redirect_windows (MetaCompositor *compositor,
+                  MetaScreen     *screen)
 {
-  MetaCompScreen *info;
-  MetaDisplay    *display       = meta_screen_get_display (screen);
-  Display        *xdisplay      = meta_display_get_xdisplay (display);
-  int             screen_number = meta_screen_get_screen_number (screen);
-  Window          xroot         = meta_screen_get_xroot (screen);
-  Window          xwin;
-  gint            width, height;
-  XWindowAttributes attr;
-  long            event_mask;
-  guint           n_retries;
-  guint           max_retries;
+  // MetaCompScreen *info;
+  // MetaDisplay    *display       = meta_screen_get_display (screen);
+  // Display        *xdisplay      = meta_display_get_xdisplay (display);
+  // int             screen_number = meta_screen_get_screen_number (screen);
+  // Window          xroot         = meta_screen_get_xroot (screen);
+  // Window          xwin;
+  // gint            width, height;
+  // XWindowAttributes attr;
+  // long            event_mask;
+  // guint           n_retries;
+  // guint           max_retries;
 
-  /* Check if the screen is already managed */
-  if (meta_screen_get_compositor_data (screen))
-    return;
+  // /* Check if the screen is already managed */
+  // if (meta_screen_get_compositor_data (screen))
+  //   return;
+  MetaDisplay *display       = meta_screen_get_display (screen);
+  Display     *xdisplay      = meta_display_get_xdisplay (display);
+  Window       xroot         = meta_screen_get_xroot (screen);
+  int          screen_number = meta_screen_get_screen_number (screen);
+  guint        n_retries;
+  guint        max_retries;
 
   if (meta_get_replace_current_wm ())
     max_retries = 5;
@@ -600,6 +571,23 @@ meta_compositor_manage_screen (MetaCompositor *compositor,
       n_retries++;
       g_usleep (G_USEC_PER_SEC);
     }
+}
+
+void
+meta_compositor_manage_screen (MetaCompositor *compositor,
+                               MetaScreen     *screen)
+{
+  MetaCompScreen *info;
+  MetaDisplay    *display       = meta_screen_get_display (screen);
+  Display        *xdisplay      = meta_display_get_xdisplay (display);
+  Window          xwin;
+  gint            width, height;
+  XWindowAttributes attr;
+  long            event_mask;
+
+  /* Check if the screen is already managed */
+  if (meta_screen_get_compositor_data (screen))
+    return;
 
   info = g_new0 (MetaCompScreen, 1);
   /*
@@ -621,15 +609,10 @@ meta_compositor_manage_screen (MetaCompositor *compositor,
 
   info->stage = clutter_stage_new ();
 
-#if CLUTTER_CHECK_VERSION (1, 19, 5) /* Unstable API change */
-  g_signal_connect_after (CLUTTER_STAGE (info->stage), "after-paint",
-                          G_CALLBACK (after_stage_paint), info);
-#else
   clutter_stage_set_paint_callback (CLUTTER_STAGE (info->stage),
                                     after_stage_paint,
                                     info,
                                     NULL);
-#endif
 
   clutter_stage_set_sync_delay (CLUTTER_STAGE (info->stage), META_SYNC_DELAY);
 
@@ -657,19 +640,17 @@ meta_compositor_manage_screen (MetaCompositor *compositor,
   XSelectInput (xdisplay, xwin, event_mask);
 
   info->window_group = meta_window_group_new (screen);
-  info->background_actor = meta_background_actor_new_for_screen (screen);
-  info->bottom_window_group = clutter_group_new();
-  info->overlay_group = clutter_group_new ();
+  info->bottom_window_group = clutter_actor_new ();
+  info->overlay_group = clutter_actor_new ();
   info->top_window_group = meta_window_group_new (screen);
-
-  clutter_container_add (CLUTTER_CONTAINER (info->window_group),
-                         info->background_actor,
-                         NULL);
 
   clutter_container_add (CLUTTER_CONTAINER (info->stage),
                          info->window_group,
                          info->overlay_group,
                          NULL);
+
+  clutter_actor_add_child (info->stage, info->window_group);
+  clutter_actor_add_child (info->stage, info->overlay_group);
 
   info->plugin_mgr = meta_plugin_manager_new (screen);
 
@@ -701,9 +682,12 @@ meta_compositor_manage_screen (MetaCompositor *compositor,
     }
 
   clutter_actor_show (info->overlay_group);
-  clutter_actor_show (info->stage);
+  // clutter_actor_show (info->stage);
+  XMapWindow (xdisplay, info->output);
 
   compositor->have_x11_sync_object = meta_sync_ring_init (xdisplay);
+
+  redirect_windows (compositor, screen);
 }
 
 void
@@ -1073,6 +1057,7 @@ sync_actor_stacking (MetaCompScreen *info)
   GList *expected_window_node;
   GList *tmp;
   GList *old;
+  GList *backgrounds;
   gboolean has_windows;
   gboolean reordered;
 
@@ -1082,7 +1067,7 @@ sync_actor_stacking (MetaCompScreen *info)
    * little effort to make sure we actually need to restack before
    * we go ahead and do it */
 
-  children = clutter_container_get_children (CLUTTER_CONTAINER (info->window_group));
+  children = clutter_actor_get_children (info->window_group);
   reordered = FALSE;
 
   /* We allow for actors in the window group other than the actors we
@@ -1090,15 +1075,19 @@ sync_actor_stacking (MetaCompScreen *info)
    * (we really need extra API to make that reliable.)
    */
 
-  /* First we check if the background is at the bottom. Then
-   * we check if the window actors are in the correct sequence */
+  /* First we collect a list of all backgrounds, and check if they're at the
+   * bottom. Then we check if the window actors are in the correct sequence */
+  backgrounds = NULL;
   expected_window_node = info->windows;
   for (old = children; old != NULL; old = old->next)
     {
       ClutterActor *actor = old->data;
 
-      if (actor == info->background_actor)
+      if (META_IS_BACKGROUND_GROUP (actor) ||
+          META_IS_BACKGROUND_ACTOR (actor))
         {
+          backgrounds = g_list_prepend (backgrounds, actor);
+
           if (has_windows)
             reordered = TRUE;
         }
@@ -1116,18 +1105,36 @@ sync_actor_stacking (MetaCompScreen *info)
   g_list_free (children);
 
   if (!reordered)
-    return;
-
-  /* reorder the actors by lowering them in turn to the bottom of the stack.
-   * windows first, then background */
-  for (tmp = g_list_last (info->windows); tmp != NULL; tmp = tmp->prev)
     {
-      MetaWindowActor *window_actor = tmp->data;
-
-      clutter_actor_lower_bottom (CLUTTER_ACTOR (window_actor));
+      g_list_free (backgrounds);
+      return;
     }
 
-  clutter_actor_lower_bottom (info->background_actor);
+  /* reorder the actors by lowering them in turn to the bottom of the stack.
+   * windows first, then background.
+   *
+   * We reorder the actors even if they're not parented to the window group,
+   * to allow stacking to work with intermediate actors (eg during effects)
+   */
+  for (tmp = g_list_last (info->windows); tmp != NULL; tmp = tmp->prev)
+    {
+      ClutterActor *actor = tmp->data, *parent;
+
+      parent = clutter_actor_get_parent (actor);
+      clutter_actor_set_child_below_sibling (parent, actor, NULL);
+    }
+
+  /* we prepended the backgrounds above so the last actor in the list
+   * should get lowered to the bottom last.
+   */
+  for (tmp = backgrounds; tmp != NULL; tmp = tmp->next)
+    {
+      ClutterActor *actor = tmp->data, *parent;
+
+      parent = clutter_actor_get_parent (actor);
+      clutter_actor_set_child_below_sibling (parent, actor, NULL);
+    }
+  g_list_free (backgrounds);
 }
 
 void
@@ -1266,9 +1273,9 @@ meta_compositor_sync_window_geometry (MetaCompositor *compositor,
 
 void
 meta_compositor_sync_screen_size (MetaCompositor  *compositor,
-				  MetaScreen	  *screen,
-				  guint		   width,
-				  guint		   height)
+                                  MetaScreen      *screen,
+                                  guint            width,
+                                  guint            height)
 {
   MetaDisplay    *display = meta_screen_get_display (screen);
   MetaCompScreen *info    = meta_screen_get_compositor_data (screen);
@@ -1282,8 +1289,6 @@ meta_compositor_sync_screen_size (MetaCompositor  *compositor,
   xwin = clutter_x11_get_stage_window (CLUTTER_STAGE (info->stage));
 
   XResizeWindow (xdisplay, xwin, width, height);
-
-  meta_background_actor_screen_size_changed (screen);
 
   meta_verbose ("Changed size for stage on screen %d to %dx%d\n",
 		meta_screen_get_screen_number (screen),
@@ -1549,21 +1554,12 @@ meta_enable_unredirect_for_screen (MetaScreen *screen)
 #define FLASH_TIME_MS 50
 
 static void
-flash_out_completed (ClutterAnimation *animation,
-                     ClutterActor     *flash)
+flash_out_completed (ClutterTimeline *timeline,
+                     gboolean         is_finished,
+                     gpointer         user_data)
 {
+  ClutterActor *flash = CLUTTER_ACTOR (user_data);
   clutter_actor_destroy (flash);
-}
-
-static void
-flash_in_completed (ClutterAnimation *animation,
-                    ClutterActor     *flash)
-{
-  clutter_actor_animate (flash, CLUTTER_EASE_IN_QUAD,
-                         FLASH_TIME_MS,
-                         "opacity", 0,
-                         "signal-after::completed", flash_out_completed, flash,
-                         NULL);
 }
 
 void
@@ -1572,22 +1568,31 @@ meta_compositor_flash_screen (MetaCompositor *compositor,
 {
   ClutterActor *stage;
   ClutterActor *flash;
-  ClutterColor black = { 0, 0, 0, 255 };
+  ClutterTransition *transition;
   gfloat width, height;
 
   stage = meta_get_stage_for_screen (screen);
   clutter_actor_get_size (stage, &width, &height);
 
-  flash = clutter_rectangle_new_with_color (&black);
+  flash = clutter_actor_new ();
+  clutter_actor_set_background_color (flash, CLUTTER_COLOR_Black);
   clutter_actor_set_size (flash, width, height);
   clutter_actor_set_opacity (flash, 0);
-  clutter_container_add_actor (CLUTTER_CONTAINER (stage), flash);
+  clutter_actor_add_child (stage, flash);
 
-  clutter_actor_animate (flash, CLUTTER_EASE_OUT_QUAD,
-                         FLASH_TIME_MS,
-                         "opacity", 192,
-                         "signal-after::completed", flash_in_completed, flash,
-                         NULL);
+  clutter_actor_save_easing_state (flash);
+  clutter_actor_set_easing_mode (flash, CLUTTER_EASE_IN_QUAD);
+  clutter_actor_set_easing_duration (flash, FLASH_TIME_MS);
+  clutter_actor_set_opacity (flash, 192);
+
+  transition = clutter_actor_get_transition (flash, "opacity");
+  clutter_timeline_set_auto_reverse (CLUTTER_TIMELINE (transition), TRUE);
+  clutter_timeline_set_repeat_count (CLUTTER_TIMELINE (transition), 2);
+
+  g_signal_connect (transition, "stopped",
+                    G_CALLBACK (flash_out_completed), flash);
+
+  clutter_actor_restore_easing_state (flash);
 }
 
 void

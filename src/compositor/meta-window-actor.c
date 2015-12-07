@@ -190,7 +190,7 @@ static void meta_window_actor_handle_updates (MetaWindowActor *self);
 
 static void check_needs_reshape (MetaWindowActor *self);
 
-G_DEFINE_TYPE (MetaWindowActor, meta_window_actor, CLUTTER_TYPE_GROUP);
+G_DEFINE_TYPE (MetaWindowActor, meta_window_actor, CLUTTER_TYPE_ACTOR);
 
 static void
 frame_data_free (FrameData *frame)
@@ -417,7 +417,7 @@ meta_window_actor_constructed (GObject *object)
     {
       priv->actor = meta_shaped_texture_new ();
 
-      clutter_container_add_actor (CLUTTER_CONTAINER (self), priv->actor);
+      clutter_actor_add_child (CLUTTER_ACTOR (self), priv->actor);
 
       /*
        * Since we are holding a pointer to this actor independently of the
@@ -441,7 +441,7 @@ meta_window_actor_constructed (GObject *object)
        * This is the case where existing window is gaining/loosing frame.
        * Just ensure the actor is top most (i.e., above shadow).
        */
-      clutter_actor_raise_top (priv->actor);
+      clutter_actor_set_child_above_sibling (CLUTTER_ACTOR (self), priv->actor, NULL);
     }
 
   meta_window_actor_update_opacity (self);
@@ -510,6 +510,7 @@ meta_window_actor_finalize (GObject *object)
   MetaWindowActor        *self = META_WINDOW_ACTOR (object);
   MetaWindowActorPrivate *priv = self->priv;
 
+  g_list_free_full (priv->frames, (GDestroyNotify) frame_data_free);
   g_free (priv->desc);
 
   G_OBJECT_CLASS (meta_window_actor_parent_class)->finalize (object);
@@ -979,7 +980,7 @@ static void
 meta_window_actor_damage_all (MetaWindowActor *self)
 {
   MetaWindowActorPrivate *priv = self->priv;
-  CoglHandle texture;
+  CoglTexture *texture;
 
   if (!priv->needs_damage_all)
     return;
@@ -1498,7 +1499,7 @@ meta_window_actor_show (MetaWindowActor   *self,
       event == 0 ||
       !start_simple_effect (self, event))
     {
-      clutter_actor_show_all (CLUTTER_ACTOR (self));
+      clutter_actor_show (CLUTTER_ACTOR (self));
       priv->redecorating = FALSE;
     }
 }
@@ -1684,8 +1685,7 @@ meta_window_actor_new (MetaWindow *window)
   if (window->type == META_WINDOW_DROPDOWN_MENU ||
       window->type == META_WINDOW_POPUP_MENU ||
       window->type == META_WINDOW_COMBO) {
-    clutter_container_add_actor (CLUTTER_CONTAINER (info->top_window_group),
-			       CLUTTER_ACTOR (self));
+    clutter_actor_add_child (info->top_window_group, CLUTTER_ACTOR (self));
   }
   else if (window->type == META_WINDOW_TOOLTIP) {
     meta_window_get_work_area_all_monitors(window, rectWorkArea);
@@ -1699,15 +1699,12 @@ meta_window_actor_new (MetaWindow *window)
     if ((rectWindow->y + rectWindow->height) > (rectWorkArea->y  + rectWorkArea->height)) {
       meta_window_move(window, FALSE, rectWindow->x, rectWorkArea->y + rectWorkArea->height - rectWindow->height);
     }
-    clutter_container_add_actor (CLUTTER_CONTAINER (info->top_window_group),
-		       CLUTTER_ACTOR (self));
+    clutter_actor_add_child (info->top_window_group, CLUTTER_ACTOR (self));
   }
   else if (window->type == META_WINDOW_DESKTOP) {
-    clutter_container_add_actor (CLUTTER_CONTAINER (info->bottom_window_group),
-			       CLUTTER_ACTOR (self));
-  }else{
-    clutter_container_add_actor (CLUTTER_CONTAINER (info->window_group),
-			       CLUTTER_ACTOR (self));
+    clutter_actor_add_child (info->bottom_window_group, CLUTTER_ACTOR (self));
+  } else {
+    clutter_actor_add_child (info->window_group, CLUTTER_ACTOR (self));
   }
   clutter_actor_hide (CLUTTER_ACTOR (self));
 
@@ -1891,7 +1888,7 @@ check_needs_pixmap (MetaWindowActor *self)
 
   if (priv->back_pixmap == None)
     {
-      CoglHandle texture;
+      CoglTexture *texture;
 
       meta_error_trap_push (display);
 
@@ -1929,7 +1926,7 @@ check_needs_pixmap (MetaWindowActor *self)
        * do it here.
        * See: http://bugzilla.clutter-project.org/show_bug.cgi?id=2236
        */
-      if (G_UNLIKELY (!cogl_texture_pixmap_x11_is_using_tfp_extension (texture)))
+      if (G_UNLIKELY (!cogl_texture_pixmap_x11_is_using_tfp_extension (COGL_TEXTURE_PIXMAP_X11 (texture))))
         g_warning ("NOTE: Not using GLX TFP!\n");
 
       /* ::size-changed is supposed to refer to meta_window_get_outer_rect().
@@ -2207,13 +2204,13 @@ build_and_scan_frame_mask (MetaWindowActor       *self,
   MetaWindowActorPrivate *priv = self->priv;
   guchar *mask_data;
   guint tex_width, tex_height;
-  CoglHandle paint_tex, mask_texture;
+  CoglTexture *paint_tex, *mask_texture;
   int stride;
   cairo_t *cr;
   cairo_surface_t *surface;
 
   paint_tex = meta_shaped_texture_get_texture (META_SHAPED_TEXTURE (priv->actor));
-  if (paint_tex == COGL_INVALID_HANDLE)
+  if (paint_tex == NULL)
     return;
 
   tex_width = cogl_texture_get_width (paint_tex);
@@ -2281,7 +2278,7 @@ build_and_scan_frame_mask (MetaWindowActor       *self,
 
   meta_shaped_texture_set_mask_texture (META_SHAPED_TEXTURE (priv->actor),
                                         mask_texture);
-  cogl_handle_unref (mask_texture);
+  cogl_object_unref (mask_texture);
 
   g_free (mask_data);
 }
@@ -2316,8 +2313,9 @@ check_needs_reshape (MetaWindowActor *self)
   client_area.width = priv->window->rect.width;
   client_area.height = priv->window->rect.height;
 
-  meta_shaped_texture_set_mask_texture (META_SHAPED_TEXTURE (priv->actor), COGL_INVALID_HANDLE);
+  meta_shaped_texture_set_mask_texture (META_SHAPED_TEXTURE (priv->actor), NULL);
   g_clear_pointer (&priv->shape_region, cairo_region_destroy);
+  g_clear_pointer (&priv->opaque_region, cairo_region_destroy);
 
 #ifdef HAVE_SHAPE
   if (priv->window->has_shape)

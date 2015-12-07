@@ -7,25 +7,26 @@
 
 #include <gdk/gdk.h> /* for gdk_rectangle_intersect() */
 
+#include "clutter-utils.h"
 #include "compositor-private.h"
 #include "meta-window-actor-private.h"
 #include "meta-window-group.h"
 #include "meta-background-actor-private.h"
-#include "clutter-utils.h"
+#include "meta-background-group-private.h"
 
 struct _MetaWindowGroupClass
 {
-  ClutterGroupClass parent_class;
+  ClutterActorClass parent_class;
 };
 
 struct _MetaWindowGroup
 {
-  ClutterGroup parent;
+  ClutterActor parent;
 
   MetaScreen *screen;
 };
 
-G_DEFINE_TYPE (MetaWindowGroup, meta_window_group, CLUTTER_TYPE_GROUP);
+G_DEFINE_TYPE (MetaWindowGroup, meta_window_group, CLUTTER_TYPE_ACTOR);
 
 /* Help macros to scale from OpenGL <-1,1> coordinates system to
  * window coordinates ranging [0,window-size]. Borrowed from clutter-utils.c
@@ -126,7 +127,7 @@ meta_window_group_paint (ClutterActor *actor)
    * and subtract the opaque area of each window out of the visible
    * region that we pass to the windows below.
    */
-  children = clutter_container_get_children (CLUTTER_CONTAINER (actor));
+  children = clutter_actor_get_children (actor);
   children = g_list_reverse (children);
 
   /* Get the clipped redraw bounds from Clutter so that we can avoid
@@ -202,9 +203,10 @@ meta_window_group_paint (ClutterActor *actor)
           meta_window_actor_set_visible_region_beneath (window_actor, visible_region);
           cairo_region_translate (visible_region, x, y);
         }
-      else if (META_IS_BACKGROUND_ACTOR (l->data))
+      else if (META_IS_BACKGROUND_ACTOR (l->data) ||
+               META_IS_BACKGROUND_GROUP (l->data))
         {
-          MetaBackgroundActor *background_actor = l->data;
+          ClutterActor *background_actor = l->data;
           int x, y;
 
           if (!meta_actor_is_untransformed (CLUTTER_ACTOR (background_actor), &x, &y))
@@ -214,7 +216,11 @@ meta_window_group_paint (ClutterActor *actor)
           y += paint_y_offset;
 
           cairo_region_translate (visible_region, - x, - y);
-          meta_background_actor_set_visible_region (background_actor, visible_region);
+          
+          if (META_IS_BACKGROUND_GROUP (background_actor))
+            meta_background_group_set_visible_region (META_BACKGROUND_GROUP (background_actor), visible_region);
+          else
+            meta_background_actor_set_visible_region (META_BACKGROUND_ACTOR (background_actor), visible_region);
           cairo_region_translate (visible_region, x, y);
         }
     }
@@ -243,12 +249,39 @@ meta_window_group_paint (ClutterActor *actor)
   g_list_free (children);
 }
 
+/* Adapted from clutter_actor_update_default_paint_volume() */
+static gboolean
+meta_window_group_get_paint_volume (ClutterActor       *self,
+                                    ClutterPaintVolume *volume)
+{
+  ClutterActorIter iter;
+  ClutterActor *child;
+
+  clutter_actor_iter_init (&iter, self);
+  while (clutter_actor_iter_next (&iter, &child))
+    {
+      const ClutterPaintVolume *child_volume;
+
+      if (!CLUTTER_ACTOR_IS_MAPPED (child))
+        continue;
+
+      child_volume = clutter_actor_get_transformed_paint_volume (child, self);
+      if (child_volume == NULL)
+        return FALSE;
+
+      clutter_paint_volume_union (volume, child_volume);
+    }
+
+  return TRUE;
+}
+
 static void
 meta_window_group_class_init (MetaWindowGroupClass *klass)
 {
   ClutterActorClass *actor_class = CLUTTER_ACTOR_CLASS (klass);
 
   actor_class->paint = meta_window_group_paint;
+  actor_class->get_paint_volume = meta_window_group_get_paint_volume;
 }
 
 static void
