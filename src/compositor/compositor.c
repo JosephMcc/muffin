@@ -280,22 +280,22 @@ meta_get_window_group_for_screen (MetaScreen *screen)
   return info->window_group;
 }
 
-/**
- * meta_get_bottom_window_group_for_screen:
- * @screen: a #MetaScreen
- *
- * Returns: (transfer none): The bottom window group corresponding to @screen
- */
-ClutterActor *
-meta_get_bottom_window_group_for_screen (MetaScreen *screen)
-{
-  MetaCompScreen *info = meta_screen_get_compositor_data (screen);
+// /**
+//  * meta_get_bottom_window_group_for_screen:
+//  * @screen: a #MetaScreen
+//  *
+//  * Returns: (transfer none): The bottom window group corresponding to @screen
+//  */
+// ClutterActor *
+// meta_get_bottom_window_group_for_screen (MetaScreen *screen)
+// {
+//   MetaCompScreen *info = meta_screen_get_compositor_data (screen);
 
-  if (!info)
-    return NULL;
+//   if (!info)
+//     return NULL;
 
-  return info->bottom_window_group;
-}
+//   return info->bottom_window_group;
+// }
 
 /**
  * meta_get_top_window_group_for_screen:
@@ -518,21 +518,6 @@ static void
 redirect_windows (MetaCompositor *compositor,
                   MetaScreen     *screen)
 {
-  // MetaCompScreen *info;
-  // MetaDisplay    *display       = meta_screen_get_display (screen);
-  // Display        *xdisplay      = meta_display_get_xdisplay (display);
-  // int             screen_number = meta_screen_get_screen_number (screen);
-  // Window          xroot         = meta_screen_get_xroot (screen);
-  // Window          xwin;
-  // gint            width, height;
-  // XWindowAttributes attr;
-  // long            event_mask;
-  // guint           n_retries;
-  // guint           max_retries;
-
-  // /* Check if the screen is already managed */
-  // if (meta_screen_get_compositor_data (screen))
-  //   return;
   MetaDisplay *display       = meta_screen_get_display (screen);
   Display     *xdisplay      = meta_display_get_xdisplay (display);
   Window       xroot         = meta_screen_get_xroot (screen);
@@ -640,16 +625,12 @@ meta_compositor_manage_screen (MetaCompositor *compositor,
   XSelectInput (xdisplay, xwin, event_mask);
 
   info->window_group = meta_window_group_new (screen);
-  info->bottom_window_group = clutter_actor_new ();
-  info->overlay_group = clutter_actor_new ();
+  // info->bottom_window_group = clutter_actor_new ();
   info->top_window_group = meta_window_group_new (screen);
-
-  clutter_container_add (CLUTTER_CONTAINER (info->stage),
-                         info->window_group,
-                         info->overlay_group,
-                         NULL);
+  info->overlay_group = clutter_actor_new ();
 
   clutter_actor_add_child (info->stage, info->window_group);
+  clutter_actor_add_child (info->stage, info->top_window_group);
   clutter_actor_add_child (info->stage, info->overlay_group);
 
   info->plugin_mgr = meta_plugin_manager_new (screen);

@@ -79,7 +79,6 @@ static void
 meta_workspace_finalize (GObject *object)
 {
   /* Actual freeing done in meta_workspace_remove() for now */
-  
   G_OBJECT_CLASS (meta_workspace_parent_class)->finalize (object);
 }
 

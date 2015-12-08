@@ -42,7 +42,7 @@ struct _MetaCompScreen
 {
   MetaScreen            *screen;
 
-  ClutterActor          *stage, *bottom_window_group, *window_group, *overlay_group, *top_window_group;
+  ClutterActor          *stage, *window_group, *top_window_group, *overlay_group;
   ClutterActor          *background_actor;
   GList                 *windows;
   GHashTable            *windows_by_xid;

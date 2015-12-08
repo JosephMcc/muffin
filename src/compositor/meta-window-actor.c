@@ -1640,10 +1640,9 @@ meta_window_actor_new (MetaWindow *window)
   MetaCompScreen         *info = meta_screen_get_compositor_data (screen);
   MetaWindowActor        *self;
   MetaWindowActorPrivate *priv;
-  MetaFrame		 *frame;
-  Window		  top_window;
-  MetaRectangle rectWorkArea[1];
-  MetaRectangle *rectWindow;
+  MetaFrame              *frame;
+  Window                  top_window;
+  ClutterActor           *window_group;
 
   frame = meta_window_get_frame (window);
   if (frame)
@@ -1682,30 +1681,13 @@ meta_window_actor_new (MetaWindow *window)
   /* Hang our compositor window state off the MetaWindow for fast retrieval */
   meta_window_set_compositor_private (window, G_OBJECT (self));
   
-  if (window->type == META_WINDOW_DROPDOWN_MENU ||
-      window->type == META_WINDOW_POPUP_MENU ||
-      window->type == META_WINDOW_COMBO) {
+  if (window->layer == META_LAYER_OVERRIDE_REDIRECT)
     clutter_actor_add_child (info->top_window_group, CLUTTER_ACTOR (self));
-  }
-  else if (window->type == META_WINDOW_TOOLTIP) {
-    meta_window_get_work_area_all_monitors(window, rectWorkArea);
-    rectWindow = meta_window_get_rect(window);
-    // move tooltip out of top panel if necessary
-    if (rectWindow->y < rectWorkArea->y) {
-      meta_window_move(window, FALSE, rectWindow->x, rectWorkArea->y);
-    }
-    rectWindow = meta_window_get_rect(window);
-    // move tooltip out of bottom panel if necessary
-    if ((rectWindow->y + rectWindow->height) > (rectWorkArea->y  + rectWorkArea->height)) {
-      meta_window_move(window, FALSE, rectWindow->x, rectWorkArea->y + rectWorkArea->height - rectWindow->height);
-    }
-    clutter_actor_add_child (info->top_window_group, CLUTTER_ACTOR (self));
-  }
-  else if (window->type == META_WINDOW_DESKTOP) {
-    clutter_actor_add_child (info->bottom_window_group, CLUTTER_ACTOR (self));
-  } else {
+  // else if (window->type == META_WINDOW_DESKTOP)
+  //   clutter_actor_add_child (info->bottom_window_group, CLUTTER_ACTOR (self));
+  else
     clutter_actor_add_child (info->window_group, CLUTTER_ACTOR (self));
-  }
+
   clutter_actor_hide (CLUTTER_ACTOR (self));
 
   /* Initial position in the stack is arbitrary; stacking will be synced
@@ -1759,7 +1741,7 @@ meta_window_actor_get_obscured_region (MetaWindowActor *self)
 {
   MetaWindowActorPrivate *priv = self->priv;
 
-  if (priv->back_pixmap && priv->opacity == 0xff)
+  if (priv->back_pixmap && priv->opacity == 0xff && !priv->window->shaded)
     return priv->opaque_region;
   else
     return NULL;
@@ -2311,7 +2293,10 @@ check_needs_reshape (MetaWindowActor *self)
   client_area.x = borders.total.left;
   client_area.y = borders.total.top;
   client_area.width = priv->window->rect.width;
-  client_area.height = priv->window->rect.height;
+  if (priv->window->shaded)
+    client_area.height = 0;
+  else
+    client_area.height = priv->window->rect.height;
 
   meta_shaped_texture_set_mask_texture (META_SHAPED_TEXTURE (priv->actor), NULL);
   g_clear_pointer (&priv->shape_region, cairo_region_destroy);
