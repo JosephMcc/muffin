@@ -591,7 +591,7 @@ reload_opaque_region (MetaWindow    *window,
                       MetaPropValue *value,
                       gboolean       initial)
 {
-  meta_window_update_opaque_region (window);
+  meta_window_update_opaque_region_x11 (window);
 }
 
 static void
