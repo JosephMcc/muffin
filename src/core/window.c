@@ -891,8 +891,7 @@ meta_window_new_with_attrs (MetaDisplay       *display,
        xwindow == screen->wm_cm_selection_window ||
        xwindow == screen->guard_window ||
        (display->compositor &&
-        xwindow == XCompositeGetOverlayWindow (display->xdisplay,
-					       screen->xroot)
+        xwindow == screen->composite_overlay_window
        )
       )
      ) {

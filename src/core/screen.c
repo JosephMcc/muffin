@@ -55,6 +55,8 @@
 #include <X11/extensions/Xrandr.h>
 #endif
 
+#include <X11/extensions/Xcomposite.h>
+
 #include <X11/Xatom.h>
 #include <locale.h>
 #include <string.h>
@@ -928,9 +930,15 @@ meta_screen_new (MetaDisplay *display,
   screen->compositor_data = NULL;
   screen->guard_window = None;
 
+  screen->composite_overlay_window = XCompositeGetOverlayWindow (xdisplay, xroot);
+
   screen->monitor_infos = NULL;
   screen->n_monitor_infos = 0;
-  screen->last_monitor_index = 0;  
+  screen->last_monitor_index = 0;
+
+  /* Now that we've gotten taken a reference count on the COW, we
+   * can close the helper that is holding on to it */
+  meta_restart_finish ();  
   
   reload_monitor_infos (screen);
   

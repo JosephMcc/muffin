@@ -125,6 +125,7 @@ libmuffin_la_SOURCES =				\
 	core/screen-private.h			\
 	meta/screen.h				\
 	meta/types.h				\
+	core/restart.c				\
 	core/session.c				\
 	core/session.h				\
 	core/stack.c				\
@@ -214,6 +215,10 @@ bin_PROGRAMS=muffin muffin-theme-viewer
 
 muffin_SOURCES = core/muffin.c
 muffin_LDADD = $(MUFFIN_LIBS) libmuffin.la -lclutter-glx-1.0
+
+libexec_PROGRAMS = muffin-restart-helper
+muffin_restart_helper_SOURCES = core/restart-helper.c
+muffin_restart_helper_LDADD = $(MUFFIN_LIBS)
 
 if HAVE_INTROSPECTION
 include $(INTROSPECTION_MAKEFILE)

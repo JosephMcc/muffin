@@ -198,37 +198,6 @@ process_property_notify (MetaCompositor	*compositor,
   DEBUG_TRACE ("process_property_notify: unknown\n");
 }
 
-static Window
-get_output_window (MetaScreen *screen)
-{
-  MetaDisplay *display = meta_screen_get_display (screen);
-  Display     *xdisplay = meta_display_get_xdisplay (display);
-  Window       output, xroot;
-  XWindowAttributes attr;
-  long         event_mask;
-
-  xroot = meta_screen_get_xroot (screen);
-
-  event_mask = FocusChangeMask |
-               ExposureMask |
-               EnterWindowMask | LeaveWindowMask |
-	       PointerMotionMask |
-               PropertyChangeMask |
-               ButtonPressMask | ButtonReleaseMask |
-               KeyPressMask | KeyReleaseMask;
-
-  output = XCompositeGetOverlayWindow (xdisplay, xroot);
-
-  if (XGetWindowAttributes (xdisplay, output, &attr))
-      {
-        event_mask |= attr.your_event_mask;
-      }
-
-  XSelectInput (xdisplay, output, event_mask);
-
-  return output;
-}
-
 /**
  * meta_get_stage_for_screen:
  * @screen: a #MetaScreen
@@ -638,16 +607,9 @@ meta_compositor_manage_screen (MetaCompositor *compositor,
   clutter_actor_add_child (info->stage, info->top_window_group);
   clutter_actor_add_child (info->stage, info->overlay_group);
 
-  info->plugin_mgr = meta_plugin_manager_new (screen);
+  // info->plugin_mgr = meta_plugin_manager_new (screen);
 
-  /*
-   * Delay the creation of the overlay window as long as we can, to avoid
-   * blanking out the screen. This means that during the plugin loading, the
-   * overlay window is not accessible; if the plugin needs to access it
-   * directly, it should hook into the "show" signal on stage, and do
-   * its stuff there.
-   */
-  info->output = get_output_window (screen);
+  info->output = screen->composite_overlay_window;
   XReparentWindow (xdisplay, xwin, info->output, 0, 0);
 
  /* Make sure there isn't any left-over output shape on the 
@@ -666,6 +628,8 @@ meta_compositor_manage_screen (MetaCompositor *compositor,
       XFixesDestroyRegion (xdisplay, info->pending_input_region);
       info->pending_input_region = None;
     }
+
+  info->plugin_mgr = meta_plugin_manager_new (screen);
 
   clutter_actor_show (info->overlay_group);
   // clutter_actor_show (info->stage);
@@ -690,18 +654,25 @@ meta_compositor_unmanage_screen (MetaCompositor *compositor,
   XCompositeUnredirectSubwindows (xdisplay, xroot, CompositeRedirectManual);
 }
 
-/*
- * Shapes the cow so that the given window is exposed,
- * when metaWindow is NULL it clears the shape again
+/**
+ * meta_shape_cow_for_window:
+ * @screen: A #MetaScreen
+ * @window: (allow-none): A #MetaWindow to shape the COW for
+ *
+ * Sets an bounding shape on the COW so that the given window
+ * is exposed. If @window is %NULL it clears the shape again.
+ *
+ * Used so we can unredirect windows, by shaping away the part
+ * of the COW, letting the raw window be seen through below.
  */
 static void
 meta_shape_cow_for_window (MetaScreen *screen,
-                           MetaWindow *metaWindow)
+                           MetaWindow *window)
 {
   MetaCompScreen *info = meta_screen_get_compositor_data (screen);
   Display *xdisplay = meta_display_get_xdisplay (meta_screen_get_display (screen));
 
-  if (metaWindow == NULL)
+  if (window == NULL)
       XFixesSetWindowShapeRegion (xdisplay, info->output, ShapeBounding, 0, 0, None);
   else
     {
@@ -710,7 +681,7 @@ meta_shape_cow_for_window (MetaScreen *screen,
       int width, height;
       MetaRectangle rect;
 
-      meta_window_get_outer_rect (metaWindow, &rect);
+      meta_window_get_outer_rect (window, &rect);
 
       window_bounds.x = rect.x;
       window_bounds.y = rect.y;

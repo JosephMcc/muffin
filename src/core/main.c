@@ -456,6 +456,8 @@ meta_init (void)
    * Clutter can only be initialized after the UI.
    */
   meta_clutter_init ();
+
+  meta_restart_init ();
   
   const char *renderer = (const char *) glGetString (GL_RENDERER);
   if (strstr (renderer, "llvmpipe") ||

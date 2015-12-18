@@ -80,7 +80,7 @@ CLUTTER_PACKAGE=clutter-1.0
 
 MUFFIN_PC_MODULES="
    gtk+-3.0 >= 3.9.12
-   gio-2.0 >= 2.25.10
+   gio-unix-2.0 >= 2.25.10
    pango >= 1.14.0
    cairo >= 1.10.0
    cinnamon-desktop >= 2.4.0

@@ -142,6 +142,8 @@ enum
   GRAB_OP_END,
   ZOOM_SCROLL_IN,
   ZOOM_SCROLL_OUT,
+  SHOW_RESTART_MESSAGE,
+  RESTART,
   LAST_SIGNAL
 };
 
@@ -295,6 +297,59 @@ meta_display_class_init (MetaDisplayClass *klass)
                   0,
                   NULL, NULL, NULL,
                   G_TYPE_NONE, 0);
+
+  /**
+   * MetaDisplay::show-restart-message:
+   * @display: the #MetaDisplay instance
+   * @message: (allow-none): The message to display, or %NULL
+   *  to clear a previous restart message.
+   *
+   * The ::show-restart-message signal will be emitted to indicate
+   * that the compositor should show a message during restart. This is
+   * emitted when meta_restart() is called, either by Mutter
+   * internally or by the embedding compositor.  The message should be
+   * immediately added to the Clutter stage in its final form -
+   * ::restart will be emitted to exit the application and leave the
+   * stage contents frozen as soon as the the stage is painted again.
+   *
+   * On case of failure to restart, this signal will be emitted again
+   * with %NULL for @message.
+   *
+   * Returns: %TRUE means the message was added to the stage; %FALSE
+   *   indicates that the compositor did not show the message.
+   */
+  display_signals[SHOW_RESTART_MESSAGE] =
+    g_signal_new ("show-restart-message",
+                  G_TYPE_FROM_CLASS (klass),
+                  G_SIGNAL_RUN_LAST,
+                  0,
+                  g_signal_accumulator_true_handled,
+                  NULL, NULL,
+                  G_TYPE_BOOLEAN, 1,
+                  G_TYPE_STRING);
+
+  /**
+   * MetaDisplay::restart:
+   * @display: the #MetaDisplay instance
+   *
+   * The ::restart signal is emitted to indicate that compositor
+   * should reexec the process. This is
+   * emitted when meta_restart() is called, either by Mutter
+   * internally or by the embedding compositor. See also
+   * ::show-restart-message.
+   *
+   * Returns: %FALSE to indicate that the compositor could not
+   *  be restarted. When the compositor is restarted, the signal
+   *  should not return.
+   */
+  display_signals[RESTART] =
+    g_signal_new ("restart",
+                  G_TYPE_FROM_CLASS (klass),
+                  G_SIGNAL_RUN_LAST,
+                  0,
+                  g_signal_accumulator_true_handled,
+                  NULL, NULL,
+                  G_TYPE_BOOLEAN, 0);
 
   g_object_class_install_property (object_class,
                                    PROP_FOCUS_WINDOW,
@@ -5573,4 +5628,29 @@ Window
 meta_display_get_leader_window (MetaDisplay *display)
 {
   return display->leader_window;
+}
+
+gboolean
+meta_display_show_restart_message (MetaDisplay *display,
+                                   const char  *message)
+{
+  gboolean result = FALSE;
+
+  g_signal_emit (display,
+                 display_signals[SHOW_RESTART_MESSAGE], 0,
+                 message, &result);
+
+  return result;
+}
+
+gboolean
+meta_display_request_restart (MetaDisplay *display)
+{
+  gboolean result = FALSE;
+
+  g_signal_emit (display,
+                 display_signals[RESTART], 0,
+                 &result);
+
+  return result;
 }

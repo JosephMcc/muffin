@@ -31,6 +31,9 @@ void            meta_init               (void);
 int             meta_run                (void);
 gboolean        meta_get_replace_current_wm (void);  /* Actually defined in util.c */
 
+void            meta_restart                (const char *message);
+gboolean        meta_is_restart             (void);
+
 typedef enum
 {
   META_EXIT_SUCCESS,
