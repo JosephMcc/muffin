@@ -141,8 +141,6 @@ static void meta_window_move_between_rects (MetaWindow          *window,
 static void unmaximize_window_before_freeing (MetaWindow        *window);
 static void unminimize_window_and_all_transient_parents (MetaWindow *window);
 
-static void meta_window_update_monitor (MetaWindow *window);
-
 static void notify_tile_type (MetaWindow *window);
 
 static void normalize_tile_state (MetaWindow *window);
@@ -1955,8 +1953,6 @@ meta_window_unmanage (MetaWindow  *window,
 
   meta_prefs_remove_listener (prefs_changed_callback, window);
 
-  meta_screen_queue_check_fullscreen (window->screen);
-
   g_signal_emit (window, window_signals[UNMANAGED], 0);
 
   g_object_unref (window);
@@ -2561,7 +2557,7 @@ meta_window_queue (MetaWindow *window, guint queuebits)
 
           const MetaLaterType window_queue_later_when[NUMBER_OF_QUEUES] =
             {
-              META_LATER_CALC_SHOWING,  /* CALC_SHOWING */
+              META_LATER_BEFORE_REDRAW, /* CALC_SHOWING */
               META_LATER_RESIZE,        /* MOVE_RESIZE */
               META_LATER_BEFORE_REDRAW  /* UPDATE_ICON */
             };
@@ -3273,9 +3269,6 @@ meta_window_show (MetaWindow *window)
       invalidate_work_areas (window);
     }
 
-  if (did_show)
-    meta_screen_queue_check_fullscreen (window->screen);
-
   /*
    * Now that we have shown the window, we no longer want to consider the
    * initial timestamp in any subsequent deliberations whether to focus this
@@ -3418,9 +3411,6 @@ meta_window_hide (MetaWindow *window)
                                            not_this_one,
                                            timestamp);
     }
-
-  if (did_hide)
-    meta_screen_queue_check_fullscreen (window->screen);
 }
 
 static gboolean
@@ -4288,9 +4278,6 @@ meta_window_make_fullscreen_internal (MetaWindow  *window)
       recalc_window_features (window);
       set_net_wm_state (window);
 
-      /* For the auto-minimize feature, if we fail to get focus */
-      meta_screen_queue_check_fullscreen (window->screen);
-
       meta_stack_tracker_queue_sync_stack (window->screen->stack_tracker);
       g_object_notify (G_OBJECT (window), "fullscreen");
     }
@@ -4954,15 +4941,6 @@ meta_window_update_for_monitors_changed (MetaWindow *window)
 {
   const MetaMonitorInfo *old, *new;
   int i;
-
-  if (window->type == META_WINDOW_DESKTOP)
-    return;
-
-  if (window->override_redirect)
-    {
-      meta_window_update_monitor (window);
-      return;
-    }
 
   old = window->monitor;
 
@@ -5824,12 +5802,6 @@ meta_window_configure_notify (MetaWindow      *window,
   window->rect.width = event->width;
   window->rect.height = event->height;
   meta_window_update_monitor (window);
-
-  /* Whether an override-redirect window is considered fullscreen depends
-   * on its geometry.
-   */
-  if (window->override_redirect)
-    meta_screen_queue_check_fullscreen (window->screen);
 
   if (!event->override_redirect && !event->send_event)
     meta_warning ("Unhandled change of windows override redirect status\n");

@@ -1661,10 +1661,12 @@ meta_window_actor_new (MetaWindow *window)
   /* Hang our compositor window state off the MetaWindow for fast retrieval */
   meta_window_set_compositor_private (window, G_OBJECT (self));
   
-  if (window->layer == META_LAYER_OVERRIDE_REDIRECT)
+  if (window->type == META_WINDOW_DROPDOWN_MENU ||
+      window->type == META_WINDOW_POPUP_MENU ||
+      window->type == META_WINDOW_COMBO)
     clutter_actor_add_child (info->top_window_group, CLUTTER_ACTOR (self));
-  // else if (window->type == META_WINDOW_DESKTOP)
-  //   clutter_actor_add_child (info->bottom_window_group, CLUTTER_ACTOR (self));
+  else if (window->type == META_WINDOW_DESKTOP)
+    clutter_actor_add_child (info->bottom_window_group, CLUTTER_ACTOR (self));
   else
     clutter_actor_add_child (info->window_group, CLUTTER_ACTOR (self));
 

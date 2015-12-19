@@ -46,7 +46,6 @@ struct _MetaMonitorInfo
   int number;
   MetaRectangle rect;
   gboolean is_primary;
-  gboolean in_fullscreen;
   XID output; /* The primary or first output for this crtc, None if no xrandr */
 };
 
@@ -197,7 +196,6 @@ void          meta_screen_get_natural_monitor_list (MetaScreen *screen,
 void          meta_screen_update_workspace_layout (MetaScreen             *screen);
 void          meta_screen_update_workspace_names  (MetaScreen             *screen);
 void          meta_screen_queue_workarea_recalc   (MetaScreen             *screen);
-void          meta_screen_queue_check_fullscreen  (MetaScreen             *screen);
 
 Window meta_create_offscreen_window (Display *xdisplay,
                                      Window   parent,
