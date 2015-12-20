@@ -2266,7 +2266,7 @@ event_callback (XEvent   *event,
 
           if (display->grab_op != META_GRAB_OP_NONE &&
               display->grab_window == window &&
-              ((window->frame == NULL) || !window->frame->mapped))
+              window->frame == NULL)
             meta_display_end_grab_op (display, timestamp);
       
           if (!frame_was_receiver)
@@ -3593,7 +3593,7 @@ meta_display_begin_grab_op (MetaDisplay *display,
    *   key grab on the RootWindow.
    */
   if (grab_window)
-    grab_xwindow = grab_window->frame ? grab_window->frame->xwindow : grab_window->xwindow;
+    grab_xwindow = meta_window_get_toplevel_xwindow (grab_window);
   else
     grab_xwindow = screen->xroot;
 

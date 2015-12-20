@@ -1127,7 +1127,7 @@ meta_window_grab_keys (MetaWindow  *window)
   grab_keys (window->display->key_bindings,
              window->display->n_key_bindings,
              window->display,
-             window->frame ? window->frame->xwindow : window->xwindow,
+             meta_window_get_toplevel_xwindow (window),
              TRUE);
 
   window->keys_grabbed = TRUE;
@@ -1290,7 +1290,7 @@ meta_window_grab_all_keys (MetaWindow  *window,
               window->desc);
   meta_window_focus (window, timestamp);
   
-  grabwindow = window->frame ? window->frame->xwindow : window->xwindow;
+  grabwindow = meta_window_get_toplevel_xwindow (window);
 
   meta_topic (META_DEBUG_KEYBINDINGS,
               "Grabbing all keys on window %s\n", window->desc);

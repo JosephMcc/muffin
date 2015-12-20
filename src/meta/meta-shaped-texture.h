@@ -61,6 +61,10 @@ ClutterActor *meta_shaped_texture_new (void);
 void meta_shaped_texture_set_texture (MetaShapedTexture *stex,
                                       CoglTexture       *texture);
 
+gboolean meta_shaped_texture_get_unobscured_bounds (MetaShapedTexture     *stex,
+                                                    cairo_rectangle_int_t *unobscured_bounds);
+gboolean meta_shaped_texture_is_obscured (MetaShapedTexture *self);
+
 void meta_shaped_texture_set_create_mipmaps (MetaShapedTexture *stex,
 					     gboolean           create_mipmaps);
 
@@ -68,8 +72,7 @@ gboolean meta_shaped_texture_update_area (MetaShapedTexture *stex,
                                           int                x,
                                           int                y,
                                           int                width,
-                                          int                height,
-                                          cairo_region_t    *unobscured_region);
+                                          int                height);
 
 void meta_shaped_texture_set_pixmap (MetaShapedTexture *stex,
                                      Pixmap             pixmap);
@@ -78,8 +81,6 @@ CoglTexture * meta_shaped_texture_get_texture (MetaShapedTexture *stex);
 
 void meta_shaped_texture_set_mask_texture (MetaShapedTexture *stex,
                                            CoglTexture       *mask_texture);
-void meta_shaped_texture_set_input_shape_region (MetaShapedTexture *stex,
-                                                 cairo_region_t    *shape_region);
 
 void meta_shaped_texture_set_opaque_region (MetaShapedTexture *stex,
                                             cairo_region_t    *opaque_region);

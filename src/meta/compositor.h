@@ -67,6 +67,9 @@ void meta_compositor_unmanage_screen (MetaCompositor *compositor,
 void meta_compositor_window_shape_changed (MetaCompositor *compositor,
                                            MetaWindow     *window);
 
+void meta_compositor_window_opacity_changed (MetaCompositor *compositor,
+                                             MetaWindow     *window);
+
 gboolean meta_compositor_process_event (MetaCompositor *compositor,
                                         XEvent         *event,
                                         MetaWindow     *window);
@@ -117,11 +120,10 @@ gboolean meta_compositor_process_event (MetaCompositor *compositor,
  * never be unmapped.
  */
 
-void meta_compositor_add_window    (MetaCompositor *compositor,
-                                    MetaWindow     *window);
-void meta_compositor_remove_window (MetaCompositor *compositor,
-                                    MetaWindow     *window);
-
+void meta_compositor_add_window        (MetaCompositor      *compositor,
+                                        MetaWindow          *window);
+void meta_compositor_remove_window     (MetaCompositor      *compositor,
+                                        MetaWindow          *window);
 void meta_compositor_show_window       (MetaCompositor      *compositor,
                                         MetaWindow          *window,
                                         MetaCompEffect       effect);
@@ -143,10 +145,6 @@ void meta_compositor_unmaximize_window (MetaCompositor      *compositor,
                                         MetaRectangle       *old_rect,
                                         MetaRectangle       *new_rect);
 
-void meta_compositor_window_mapped        (MetaCompositor *compositor,
-                                           MetaWindow     *window);
-void meta_compositor_window_unmapped      (MetaCompositor *compositor,
-                                           MetaWindow     *window);
 void meta_compositor_sync_window_geometry (MetaCompositor *compositor,
                                            MetaWindow     *window,
                                            gboolean        did_placement);

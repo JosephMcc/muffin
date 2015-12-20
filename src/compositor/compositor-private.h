@@ -17,8 +17,6 @@ struct _MetaCompositor
 {
   MetaDisplay    *display;
 
-  Atom            atom_x_root_pixmap;
-  Atom            atom_net_wm_window_opacity;
   guint           pre_paint_func_id;
   guint           post_paint_func_id;
 
@@ -52,8 +50,8 @@ struct _MetaCompScreen
   CoglFrameClosure      *frame_closure;
 
   /* Used for unredirecting fullscreen windows */
-  guint                   disable_unredirect_count;
-  MetaWindowActor             *unredirected_window;
+  guint                  disable_unredirect_count;
+  MetaWindow            *unredirected_window;
 
   /* Before we create the output window */
   XserverRegion     pending_input_region;

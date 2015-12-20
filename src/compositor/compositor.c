@@ -173,31 +173,6 @@ process_damage (MetaCompositor     *compositor,
   compositor->frame_has_updated_xsurfaces = TRUE;
 }
 
-static void
-process_property_notify (MetaCompositor	*compositor,
-                         XPropertyEvent *event,
-                         MetaWindow     *window)
-{
-  MetaWindowActor *window_actor;
-
-  if (window == NULL)
-    return;
-
-  window_actor = META_WINDOW_ACTOR (meta_window_get_compositor_private (window));
-  if (window_actor == NULL)
-    return;
-
-  /* Check for the opacity changing */
-  if (event->atom == compositor->atom_net_wm_window_opacity)
-    {
-      meta_window_actor_update_opacity (window_actor);
-      DEBUG_TRACE ("process_property_notify: net_wm_window_opacity\n");
-      return;
-    }
-
-  DEBUG_TRACE ("process_property_notify: unknown\n");
-}
-
 static Window
 get_output_window (MetaScreen *screen)
 {
@@ -731,6 +706,30 @@ meta_shape_cow_for_window (MetaScreen *screen,
     }
 }
 
+static void
+set_unredirected_window (MetaCompScreen *info,
+                         MetaWindow     *window)
+{
+  if (info->unredirected_window == window)
+    return;
+
+  if (info->unredirected_window != NULL)
+    {
+      MetaWindowActor *window_actor = META_WINDOW_ACTOR (meta_window_get_compositor_private (info->unredirected_window));
+      meta_window_actor_set_unredirected (window_actor, FALSE);
+    }
+
+  info->unredirected_window = window;
+
+  if (info->unredirected_window != NULL)
+    {
+      MetaWindowActor *window_actor = META_WINDOW_ACTOR (meta_window_get_compositor_private (info->unredirected_window));
+      meta_window_actor_set_unredirected (window_actor, TRUE);
+    }
+
+  meta_shape_cow_for_window (info->screen, info->unredirected_window);
+}
+
 void
 meta_compositor_add_window (MetaCompositor    *compositor,
                             MetaWindow        *window)
@@ -762,13 +761,8 @@ meta_compositor_remove_window (MetaCompositor *compositor,
   screen = meta_window_get_screen (window);
   info = meta_screen_get_compositor_data (screen);
 
-  if (window_actor == info->unredirected_window)
-    {
-      meta_window_actor_set_redirected (window_actor, TRUE);
-      meta_shape_cow_for_window (meta_window_get_screen (meta_window_actor_get_meta_window (info->unredirected_window)),
-                                 NULL);
-      info->unredirected_window = NULL;
-    }
+  if (info->unredirected_window == window)
+    set_unredirected_window (info, NULL);
 
   meta_window_actor_destroy (window_actor);
 }
@@ -833,6 +827,18 @@ meta_compositor_window_shape_changed (MetaCompositor *compositor,
   meta_window_actor_update_shape (window_actor);
 }
 
+void
+meta_compositor_window_opacity_changed (MetaCompositor *compositor,
+                                        MetaWindow     *window)
+{
+  MetaWindowActor *window_actor;
+  window_actor = META_WINDOW_ACTOR (meta_window_get_compositor_private (window));
+  if (!window_actor)
+    return;
+
+  meta_window_actor_update_opacity (window_actor);
+}
+
 /**
  * meta_compositor_process_event: (skip)
  *
@@ -891,28 +897,19 @@ meta_compositor_process_event (MetaCompositor *compositor,
         }
     }
 
-  switch (event->type)
+  if (event->type == meta_display_get_damage_event_base (compositor->display) + XDamageNotify)
     {
-    case PropertyNotify:
-      process_property_notify (compositor, (XPropertyEvent *) event, window);
-      break;
-
-    default:
-      if (event->type == meta_display_get_damage_event_base (compositor->display) + XDamageNotify)
+      /* Core code doesn't handle damage events, so we need to extract the MetaWindow
+       * ourselves
+       */
+      if (window == NULL)
         {
-          /* Core code doesn't handle damage events, so we need to extract the MetaWindow
-           * ourselves
-           */
-          if (window == NULL)
-            {
-              Window xwin = ((XDamageNotifyEvent *) event)->drawable;
-              window = meta_display_lookup_x_window (compositor->display, xwin);
-            }
-
-	  DEBUG_TRACE ("meta_compositor_process_event (process_damage)\n");
-          process_damage (compositor, (XDamageNotifyEvent *) event, window);
+          Window xwin = ((XDamageNotifyEvent *) event)->drawable;
+          window = meta_display_lookup_x_window (compositor->display, xwin);
         }
-      break;
+
+      DEBUG_TRACE ("meta_compositor_process_event (process_damage)\n");
+      process_damage (compositor, (XDamageNotifyEvent *) event, window);
     }
 
   if (compositor->have_x11_sync_object)
@@ -1216,30 +1213,6 @@ meta_compositor_sync_stack (MetaCompositor  *compositor,
 }
 
 void
-meta_compositor_window_mapped (MetaCompositor *compositor,
-                               MetaWindow     *window)
-{
-  MetaWindowActor *window_actor = META_WINDOW_ACTOR (meta_window_get_compositor_private (window));
-  DEBUG_TRACE ("meta_compositor_window_mapped\n");
-  if (!window_actor)
-    return;
-
-  meta_window_actor_mapped (window_actor);
-}
-
-void
-meta_compositor_window_unmapped (MetaCompositor *compositor,
-                                 MetaWindow     *window)
-{
-  MetaWindowActor *window_actor = META_WINDOW_ACTOR (meta_window_get_compositor_private (window));
-  DEBUG_TRACE ("meta_compositor_window_unmapped\n");
-  if (!window_actor)
-    return;
-
-  meta_window_actor_unmapped (window_actor);
-}
-
-void
 meta_compositor_sync_window_geometry (MetaCompositor *compositor,
 				      MetaWindow *window,
                                       gboolean did_placement)
@@ -1349,26 +1322,9 @@ meta_pre_paint_func (gpointer data)
 
   if (meta_window_actor_should_unredirect (top_window) &&
       info->disable_unredirect_count == 0)
-    expected_unredirected_window = top_window;
-
-  if (info->unredirected_window != expected_unredirected_window)
-    {
-      if (info->unredirected_window != NULL)
-        {
-          meta_window_actor_set_redirected (info->unredirected_window, TRUE);
-          meta_shape_cow_for_window (meta_window_get_screen (meta_window_actor_get_meta_window (info->unredirected_window)),
-                                     NULL);
-        }
-
-      if (expected_unredirected_window != NULL)
-        {
-          meta_shape_cow_for_window (meta_window_get_screen (meta_window_actor_get_meta_window (top_window)),
-                                     meta_window_actor_get_meta_window (top_window));
-          meta_window_actor_set_redirected (top_window, FALSE);
-        }
-
-      info->unredirected_window = expected_unredirected_window;
-    }
+    set_unredirected_window (info, meta_window_actor_get_meta_window (top_window));
+  else
+    set_unredirected_window (info, NULL);
 
   for (l = info->windows; l; l = l->next)
     meta_window_actor_pre_paint (l->data);
@@ -1449,13 +1405,7 @@ on_shadow_factory_changed (MetaShadowFactory *factory,
 MetaCompositor *
 meta_compositor_new (MetaDisplay *display)
 {
-  char *atom_names[] = {
-    "_XROOTPMAP_ID",
-    "_NET_WM_WINDOW_OPACITY",
-  };
-  Atom                   atoms[G_N_ELEMENTS(atom_names)];
   MetaCompositor        *compositor;
-  Display               *xdisplay = meta_display_get_xdisplay (display);
 
   if (!composite_at_least_version (display, 0, 3))
     return NULL;
@@ -1467,17 +1417,10 @@ meta_compositor_new (MetaDisplay *display)
   if (g_getenv("META_DISABLE_MIPMAPS"))
     compositor->no_mipmaps = TRUE;
 
-  meta_verbose ("Creating %d atoms\n", (int) G_N_ELEMENTS (atom_names));
-  XInternAtoms (xdisplay, atom_names, G_N_ELEMENTS (atom_names),
-                False, atoms);
-
   g_signal_connect (meta_shadow_factory_get_default (),
                     "changed",
                     G_CALLBACK (on_shadow_factory_changed),
                     compositor);
-
-  compositor->atom_x_root_pixmap = atoms[0];
-  compositor->atom_net_wm_window_opacity = atoms[1];
 
   compositor->pre_paint_func_id =
     clutter_threads_add_repaint_func_full (CLUTTER_REPAINT_FLAGS_PRE_PAINT,
