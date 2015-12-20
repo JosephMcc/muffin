@@ -425,13 +425,22 @@ meta_window_actor_constructed (GObject *object)
   if (!priv->surface)
     {
       priv->surface = meta_surface_actor_new ();
-      g_object_ref_sink (priv->surface);
+      // g_object_ref_sink (priv->surface);
 
       clutter_actor_add_child (CLUTTER_ACTOR (self), CLUTTER_ACTOR (priv->surface));
 
       g_signal_connect_object (priv->surface, "allocation-changed",
                                G_CALLBACK (surface_allocation_changed_notify), self, 0);
       meta_window_actor_update_shape (self);
+
+      /*
+       * Since we are holding a pointer to this actor independently of the
+       * ClutterContainer internals, and provide a public API to access it,
+       * add a reference here, so that if someone is messing about with us
+       * via the container interface, we do not end up with a dangling pointer.
+       * We will release it in dispose().
+       */
+      g_object_ref (priv->surface);
 
       g_signal_connect_object (window, "notify::decorated",
                                G_CALLBACK (window_decorated_notify), self, 0);
