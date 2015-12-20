@@ -42,6 +42,7 @@
 #include <cogl/cogl.h>
 #include <cogl/cogl-texture-pixmap-x11.h>
 #include <gdk/gdk.h> /* for gdk_rectangle_intersect() */
+#include "meta-cullable.h"
 
 static void meta_shaped_texture_dispose  (GObject    *object);
 
@@ -61,8 +62,10 @@ static void meta_shaped_texture_get_preferred_height (ClutterActor *self,
 
 static gboolean meta_shaped_texture_get_paint_volume (ClutterActor *self, ClutterPaintVolume *volume);
 
-G_DEFINE_TYPE (MetaShapedTexture, meta_shaped_texture,
-               CLUTTER_TYPE_ACTOR);
+static void cullable_iface_init (MetaCullableInterface *iface);
+
+G_DEFINE_TYPE_WITH_CODE (MetaShapedTexture, meta_shaped_texture, CLUTTER_TYPE_ACTOR,
+                         G_IMPLEMENT_INTERFACE (META_TYPE_CULLABLE, cullable_iface_init));
 
 #define META_SHAPED_TEXTURE_GET_PRIVATE(obj) \
   (G_TYPE_INSTANCE_GET_PRIVATE ((obj), META_TYPE_SHAPED_TEXTURE, \
@@ -115,6 +118,17 @@ meta_shaped_texture_init (MetaShapedTexture *self)
 }
 
 static void
+set_clip_region (MetaShapedTexture *self,
+                 cairo_region_t    *clip_region)
+{
+  MetaShapedTexturePrivate *priv = self->priv;
+
+  g_clear_pointer (&priv->clip_region, (GDestroyNotify) cairo_region_destroy);
+  if (clip_region)
+    priv->clip_region = cairo_region_copy (clip_region);
+}
+
+static void
 meta_shaped_texture_dispose (GObject *object)
 {
   MetaShapedTexture *self = (MetaShapedTexture *) object;
@@ -128,7 +142,7 @@ meta_shaped_texture_dispose (GObject *object)
   g_clear_pointer (&priv->opaque_region, cairo_region_destroy);
 
   meta_shaped_texture_set_mask_texture (self, NULL);
-  meta_shaped_texture_set_clip_region (self, NULL);
+  set_clip_region (self, NULL);
 
   G_OBJECT_CLASS (meta_shaped_texture_parent_class)->dispose (object);
 }
@@ -601,18 +615,17 @@ meta_shaped_texture_update_area (MetaShapedTexture *stex,
           cairo_region_get_extents (intersection, &damage_rect);
           clutter_actor_queue_redraw_with_clip (CLUTTER_ACTOR (stex), &damage_rect);
           cairo_region_destroy (intersection);
-
           return TRUE;
         }
 
       cairo_region_destroy (intersection);
-
       return FALSE;
     }
-
-  clutter_actor_queue_redraw_with_clip (CLUTTER_ACTOR (stex), &clip);
-
-  return TRUE;
+  else
+    {
+      clutter_actor_queue_redraw_with_clip (CLUTTER_ACTOR (stex), &clip);
+      return TRUE;
+    }
 }
 
 static void
@@ -626,13 +639,14 @@ set_cogl_texture (MetaShapedTexture    *stex,
 
   priv = stex->priv;
 
-  if (priv->texture != NULL)
-     cogl_object_unref (priv->texture);
+  if (priv->texture)
+    cogl_object_unref (priv->texture);
 
   priv->texture = cogl_tex;
 
   if (cogl_tex != NULL)
     {
+      cogl_object_ref (cogl_tex);
       width = cogl_texture_get_width (COGL_TEXTURE (cogl_tex));
       height = cogl_texture_get_height (COGL_TEXTURE (cogl_tex));
 
@@ -657,37 +671,15 @@ set_cogl_texture (MetaShapedTexture    *stex,
 }
 
 /**
- * meta_shaped_texture_set_pixmap:
+ * meta_shaped_texture_set_texture:
  * @stex: The #MetaShapedTexture
- * @pixmap: The pixmap you want the stex to assume
+ * @texture: The #CoglTexture to display
  */
 void
-meta_shaped_texture_set_pixmap (MetaShapedTexture *stex,
-                                Pixmap             pixmap)
+meta_shaped_texture_set_texture (MetaShapedTexture *stex,
+                                 CoglTexture       *texture)
 {
-  MetaShapedTexturePrivate *priv;
-
-  g_return_if_fail (META_IS_SHAPED_TEXTURE (stex));
-
-  priv = stex->priv;
-
-  if (priv->pixmap == pixmap)
-    return;
-
-  priv->pixmap = pixmap;
-
-  if (pixmap != None)
-    {
-      CoglContext *ctx =
-        clutter_backend_get_cogl_context (clutter_get_default_backend ());
-      set_cogl_texture (stex, cogl_texture_pixmap_x11_new (ctx, pixmap, FALSE, NULL));
-    }
-  else
-    set_cogl_texture (stex, NULL);
-
-  if (priv->create_mipmaps)
-    meta_texture_tower_set_base_texture (priv->paint_tower,
-                                         COGL_TEXTURE (priv->texture));
+  set_cogl_texture (stex, texture);
 }
 
 /**
@@ -736,42 +728,6 @@ meta_shaped_texture_set_input_shape_region (MetaShapedTexture *stex,
     }
 
   clutter_actor_queue_redraw (CLUTTER_ACTOR (stex));
-}
-
-/**
- * meta_shaped_texture_set_clip_region:
- * @stex: a #MetaShapedTexture
- * @clip_region: the region of the texture that is visible and
- *   should be painted.
- *
- * Provides a hint to the texture about what areas of the texture
- * are not completely obscured and thus need to be painted. This
- * is an optimization and is not supposed to have any effect on
- * the output.
- *
- * Typically a parent container will set the clip region before
- * painting its children, and then unset it afterwards.
- */
-void
-meta_shaped_texture_set_clip_region (MetaShapedTexture *stex,
-				     cairo_region_t    *clip_region)
-{
-  MetaShapedTexturePrivate *priv;
-
-  g_return_if_fail (META_IS_SHAPED_TEXTURE (stex));
-
-  priv = stex->priv;
-
-  if (priv->clip_region)
-    {
-      cairo_region_destroy (priv->clip_region);
-      priv->clip_region = NULL;
-    }
-
-  if (clip_region)
-    priv->clip_region = cairo_region_copy (clip_region);
-  else
-    priv->clip_region = NULL;
 }
 
 /**
@@ -900,4 +856,38 @@ meta_shaped_texture_get_image (MetaShapedTexture     *stex,
     }
 
   return surface;
+}
+
+static void
+meta_shaped_texture_cull_out (MetaCullable   *cullable,
+                              cairo_region_t *unobscured_region,
+                              cairo_region_t *clip_region)
+{
+  MetaShapedTexture *self = META_SHAPED_TEXTURE (cullable);
+  MetaShapedTexturePrivate *priv = self->priv;
+
+  set_clip_region (self, clip_region);
+
+  if (clutter_actor_get_paint_opacity (CLUTTER_ACTOR (self)) == 0xff)
+    {
+      if (priv->opaque_region)
+        {
+          cairo_region_subtract (unobscured_region, priv->opaque_region);
+          cairo_region_subtract (clip_region, priv->opaque_region);
+        }
+    }
+}
+
+static void
+meta_shaped_texture_reset_culling (MetaCullable *cullable)
+{
+  MetaShapedTexture *self = META_SHAPED_TEXTURE (cullable);
+  set_clip_region (self, NULL);
+}
+
+static void
+cullable_iface_init (MetaCullableInterface *iface)
+{
+  iface->cull_out = meta_shaped_texture_cull_out;
+  iface->reset_culling = meta_shaped_texture_reset_culling;
 }

@@ -30,6 +30,7 @@
 #include "compositor-private.h"
 #include "meta-shadow-factory-private.h"
 #include "meta-window-actor-private.h"
+#include "meta-surface-actor.h"
 #include "meta-texture-rectangle.h"
 #include "region-utils.h"
 #include "meta-cullable.h"
@@ -49,7 +50,7 @@ struct _MetaWindowActorPrivate
   Window            xwindow;
   MetaScreen       *screen;
 
-  ClutterActor     *actor;
+  MetaSurfaceActor *surface;
 
   /* MetaShadowFactory only caches shadows that are actually in use;
    * to avoid unnecessary recomputation we do two things: 1) we store
@@ -73,11 +74,6 @@ struct _MetaWindowActorPrivate
 
   /* A region that matches the shape of the window, including frame bounds */
   cairo_region_t   *shape_region;
-  /* If the window has an input shape, a region that matches the shape */
-  cairo_region_t   *input_region;
-  /* The opaque region, from _NET_WM_OPAQUE_REGION, intersected with
-   * the shape region. */
-  cairo_region_t   *opaque_region;
   /* The region we should clip to when painting the shadow */
   cairo_region_t   *shadow_clip;
 
@@ -395,6 +391,18 @@ clutter_actor_opacity_notify (ClutterActor *actor,
 }
 
 static void
+surface_allocation_changed_notify (ClutterActor           *actor,
+                                   const ClutterActorBox  *allocation,
+                                   ClutterAllocationFlags  flags,
+                                   MetaWindowActor        *self)
+{
+  meta_window_actor_sync_actor_geometry (self, FALSE);
+  meta_window_actor_update_shape (self);
+
+  g_signal_emit (self, signals[SIZE_CHANGED], 0);
+}
+
+static void
 meta_window_actor_constructed (GObject *object)
 {
   MetaWindowActor        *self     = META_WINDOW_ACTOR (object);
@@ -414,20 +422,16 @@ meta_window_actor_constructed (GObject *object)
   if (format && format->type == PictTypeDirect && format->direct.alphaMask)
     priv->argb32 = TRUE;
 
-  if (!priv->actor)
+  if (!priv->surface)
     {
-      priv->actor = meta_shaped_texture_new ();
+      priv->surface = meta_surface_actor_new ();
+      g_object_ref_sink (priv->surface);
 
-      clutter_actor_add_child (CLUTTER_ACTOR (self), priv->actor);
+      clutter_actor_add_child (CLUTTER_ACTOR (self), CLUTTER_ACTOR (priv->surface));
 
-      /*
-       * Since we are holding a pointer to this actor independently of the
-       * ClutterContainer internals, and provide a public API to access it,
-       * add a reference here, so that if someone is messing about with us
-       * via the container interface, we do not end up with a dangling pointer.
-       * We will release it in dispose().
-       */
-      g_object_ref (priv->actor);
+      g_signal_connect_object (priv->surface, "allocation-changed",
+                               G_CALLBACK (surface_allocation_changed_notify), self, 0);
+      meta_window_actor_update_shape (self);
 
       g_signal_connect_object (window, "notify::decorated",
                                G_CALLBACK (window_decorated_notify), self, 0);
@@ -442,16 +446,15 @@ meta_window_actor_constructed (GObject *object)
        * This is the case where existing window is gaining/loosing frame.
        * Just ensure the actor is top most (i.e., above shadow).
        */
-      clutter_actor_set_child_above_sibling (CLUTTER_ACTOR (self), priv->actor, NULL);
+      clutter_actor_set_child_above_sibling (CLUTTER_ACTOR (self), CLUTTER_ACTOR (priv->surface), NULL);
     }
 
   meta_window_actor_update_opacity (self);
   maybe_desaturate_window (CLUTTER_ACTOR (self));
 
-  /* Start off with an empty region to maintain the invariant that
-     the shape region is always set */
+  /* Start off with an empty shape region to maintain the invariant
+   * that it's always set */
   priv->shape_region = cairo_region_create ();
-  priv->input_region = cairo_region_create ();
 }
 
 static void
@@ -478,8 +481,6 @@ meta_window_actor_dispose (GObject *object)
 
   g_clear_pointer (&priv->unobscured_region, cairo_region_destroy);
   g_clear_pointer (&priv->shape_region, cairo_region_destroy);
-  g_clear_pointer (&priv->input_region, cairo_region_destroy);
-  g_clear_pointer (&priv->opaque_region, cairo_region_destroy);
   g_clear_pointer (&priv->shadow_clip, cairo_region_destroy);
 
   g_clear_pointer (&priv->shadow_class, g_free);
@@ -503,7 +504,7 @@ meta_window_actor_dispose (GObject *object)
   /*
    * Release the extra reference we took on the actor.
    */
-  g_clear_object (&priv->actor);
+  g_clear_object (&priv->surface);
 
   G_OBJECT_CLASS (meta_window_actor_parent_class)->dispose (object);
 }
@@ -888,7 +889,21 @@ meta_window_actor_get_meta_window (MetaWindowActor *self)
 ClutterActor *
 meta_window_actor_get_texture (MetaWindowActor *self)
 {
-  return self->priv->actor;
+  return CLUTTER_ACTOR (meta_surface_actor_get_texture (self->priv->surface));
+}
+
+/**
+ * meta_window_actor_get_surface:
+ * @self: a #MetaWindowActor
+ *
+ * Gets the MetaSurfaceActor that draws the content of this window
+ *
+ * Return value: (transfer none): the #MetaSurfaceActor for the contents
+ */
+MetaSurfaceActor *
+meta_window_actor_get_surface (MetaWindowActor *self)
+{
+  return self->priv->surface;
 }
 
 /**
@@ -967,21 +982,17 @@ static void
 meta_window_actor_damage_all (MetaWindowActor *self)
 {
   MetaWindowActorPrivate *priv = self->priv;
-  CoglTexture *texture;
+  cairo_region_t *unobscured_region;
 
   if (!priv->needs_damage_all)
     return;
 
-  texture = meta_shaped_texture_get_texture (META_SHAPED_TEXTURE (priv->actor));
-
   if (!priv->mapped || priv->needs_pixmap)
     return;
 
-  meta_shaped_texture_update_area (META_SHAPED_TEXTURE (priv->actor),
-                                   0, 0,
-                                   cogl_texture_get_width (texture),
-                                   cogl_texture_get_height (texture),
-                                   clutter_actor_has_mapped_clones (priv->actor) ? NULL : priv->unobscured_region);
+  unobscured_region =
+    clutter_actor_has_mapped_clones (CLUTTER_ACTOR (priv->surface))
+    ? NULL : priv->unobscured_region;
 
   priv->needs_damage_all = FALSE;
   priv->repaint_scheduled = TRUE;
@@ -1047,7 +1058,7 @@ meta_window_actor_queue_frame_drawn (MetaWindowActor *self,
       if (priv->mapped && !priv->needs_pixmap)
         {
           const cairo_rectangle_int_t clip = { 0, 0, 1, 1 };
-          clutter_actor_queue_redraw_with_clip (priv->actor, &clip);
+          clutter_actor_queue_redraw_with_clip (CLUTTER_ACTOR (priv->surface), &clip);
           priv->repaint_scheduled = TRUE;
         }
     }
@@ -1091,7 +1102,7 @@ meta_window_actor_queue_create_pixmap (MetaWindowActor *self)
    *
    * The compositor paint function repairs all windows.
    */
-  clutter_actor_queue_redraw (priv->actor);
+  clutter_actor_queue_redraw (CLUTTER_ACTOR (priv->surface));
 }
 
 static gboolean
@@ -1181,7 +1192,7 @@ meta_window_actor_after_effects (MetaWindowActor *self)
     meta_window_actor_detach (self);
 
   if (priv->needs_pixmap)
-    clutter_actor_queue_redraw (priv->actor);
+    clutter_actor_queue_redraw (CLUTTER_ACTOR (priv->surface));
 }
 
 LOCAL_SYMBOL void
@@ -1284,8 +1295,7 @@ meta_window_actor_detach (MetaWindowActor *self)
    * you are supposed to be able to free a GLXPixmap after freeing the underlying
    * pixmap, but it certainly doesn't work with current DRI/Mesa
    */
-  meta_shaped_texture_set_pixmap (META_SHAPED_TEXTURE (priv->actor),
-                                  None);
+  meta_surface_actor_set_texture (priv->surface, NULL);
   cogl_flush();
 
   XFreePixmap (xdisplay, priv->back_pixmap);
@@ -1498,6 +1508,7 @@ meta_window_actor_hide (MetaWindowActor *self,
   g_return_if_fail (priv->visible || (!priv->visible && meta_window_is_attached_dialog (priv->window)));
 
   priv->visible = FALSE;
+  clutter_actor_set_reactive (CLUTTER_ACTOR (self), FALSE);
 
   /* If a plugin is animating a workspace transition, we have to
    * hold off on hiding the window, and do it after the workspace
@@ -1708,27 +1719,6 @@ meta_window_actor_unmapped (MetaWindowActor *self)
   priv->needs_pixmap = FALSE;
 }
 
-/**
- * meta_window_actor_get_obscured_region:
- * @self: a #MetaWindowActor
- *
- * Gets the region that is completely obscured by the window. Coordinates
- * are relative to the upper-left of the window.
- *
- * Return value: (transfer none): the area obscured by the window,
- *  %NULL is the same as an empty region.
- */
-static cairo_region_t *
-meta_window_actor_get_obscured_region (MetaWindowActor *self)
-{
-  MetaWindowActorPrivate *priv = self->priv;
-
-  if (priv->back_pixmap && priv->opacity == 0xff && !priv->window->shaded)
-    return priv->opaque_region;
-  else
-    return NULL;
-}
-
 #if 0
 /* Print out a region; useful for debugging */
 static void
@@ -1758,8 +1748,6 @@ dump_region (cairo_region_t *region)
  *
  * Provides a hint as to what areas of the window need to queue
  * redraws when damaged. Regions not in @unobscured_region are completely obscured.
- * Unlike meta_window_actor_set_clip_region(), the region here
- * doesn't take into account any clipping that is in effect while drawing.
  */
 void
 meta_window_actor_set_unobscured_region (MetaWindowActor *self,
@@ -1774,27 +1762,6 @@ meta_window_actor_set_unobscured_region (MetaWindowActor *self,
     priv->unobscured_region = cairo_region_copy (unobscured_region);
   else
     priv->unobscured_region = NULL;
-}
-
-/**
- * meta_window_actor_set_clip_region:
- * @self: a #MetaWindowActor
- * @clip_region: the region of the screen that isn't completely
- *  obscured.
- *
- * Provides a hint as to what areas of the window need to be
- * drawn. Regions not in @clip_region are completely obscured or
- * not drawn in this frame.
- * This will be set before painting then unset afterwards.
- */
-static void
-meta_window_actor_set_clip_region (MetaWindowActor *self,
-                                   cairo_region_t  *clip_region)
-{
-  MetaWindowActorPrivate *priv = self->priv;
-
-  meta_shaped_texture_set_clip_region (META_SHAPED_TEXTURE (priv->actor),
-                                       clip_region);
 }
 
 /**
@@ -1842,18 +1809,7 @@ meta_window_actor_cull_out (MetaCullable   *cullable,
     return;
 
   meta_window_actor_set_unobscured_region (self, unobscured_region);
-  meta_window_actor_set_clip_region (self, clip_region);
-
-  if (clutter_actor_get_paint_opacity (CLUTTER_ACTOR (self)) == 0xff)
-    {
-      cairo_region_t *obscured_region = meta_window_actor_get_obscured_region (self);
-      if (obscured_region)
-        {
-          cairo_region_subtract (unobscured_region, obscured_region);
-          cairo_region_subtract (clip_region, obscured_region);
-        }
-    }
-
+  meta_cullable_cull_out_children (cullable, unobscured_region, clip_region);
   meta_window_actor_set_clip_region_beneath (self, clip_region);
 }
 
@@ -1863,9 +1819,8 @@ meta_window_actor_reset_culling (MetaCullable *cullable)
   MetaWindowActor *self = META_WINDOW_ACTOR (cullable);
   MetaWindowActorPrivate *priv = self->priv;
 
-  meta_shaped_texture_set_clip_region (META_SHAPED_TEXTURE (priv->actor),
-                                       NULL);
   g_clear_pointer (&priv->shadow_clip, cairo_region_destroy);
+  meta_cullable_reset_culling_children (cullable);
 }
 
 static void
@@ -1883,7 +1838,6 @@ check_needs_pixmap (MetaWindowActor *self)
   MetaDisplay         *display  = meta_screen_get_display (screen);
   Display             *xdisplay = meta_display_get_xdisplay (display);
   MetaCompScreen      *info     = meta_screen_get_compositor_data (screen);
-  MetaCompositor      *compositor;
   Window               xwindow  = priv->xwindow;
 
   if (!priv->needs_pixmap)
@@ -1896,8 +1850,6 @@ check_needs_pixmap (MetaWindowActor *self)
       xwindow == clutter_x11_get_stage_window (CLUTTER_STAGE (info->stage)))
     return;
 
-  compositor = meta_display_get_compositor (display);
-
   if (priv->size_changed)
     {
       meta_window_actor_detach (self);
@@ -1909,6 +1861,7 @@ check_needs_pixmap (MetaWindowActor *self)
   if (priv->back_pixmap == None)
     {
       CoglTexture *texture;
+      CoglContext *ctx = clutter_backend_get_cogl_context (clutter_get_default_backend ());
 
       meta_error_trap_push (display);
 
@@ -1932,22 +1885,11 @@ check_needs_pixmap (MetaWindowActor *self)
           goto out;
         }
 
-      if (compositor->no_mipmaps)
-        meta_shaped_texture_set_create_mipmaps (META_SHAPED_TEXTURE (priv->actor),
-                                                FALSE);
-
-      meta_shaped_texture_set_pixmap (META_SHAPED_TEXTURE (priv->actor),
-                                      priv->back_pixmap);
-
-      texture = meta_shaped_texture_get_texture (META_SHAPED_TEXTURE (priv->actor));
-
-      /*
-       * This only works *after* actually setting the pixmap, so we have to
-       * do it here.
-       * See: http://bugzilla.clutter-project.org/show_bug.cgi?id=2236
-       */
+      texture = COGL_TEXTURE (cogl_texture_pixmap_x11_new (ctx, priv->back_pixmap, FALSE, NULL));
       if (G_UNLIKELY (!cogl_texture_pixmap_x11_is_using_tfp_extension (COGL_TEXTURE_PIXMAP_X11 (texture))))
         g_warning ("NOTE: Not using GLX TFP!\n");
+
+      meta_surface_actor_set_texture (META_SURFACE_ACTOR (priv->surface), texture);
 
       /* ::size-changed is supposed to refer to meta_window_get_outer_rect().
        * Emitting it here works pretty much OK because a new value of the
@@ -2042,6 +1984,8 @@ meta_window_actor_process_damage (MetaWindowActor    *self,
 {
   MetaWindowActorPrivate *priv = self->priv;
   MetaCompScreen *info = meta_screen_get_compositor_data (priv->screen);
+  gboolean redraw_queued;
+  cairo_region_t *unobscured_region;
 
   priv->received_damage = TRUE;
 
@@ -2089,13 +2033,17 @@ meta_window_actor_process_damage (MetaWindowActor    *self,
   if (!priv->mapped || priv->needs_pixmap)
     return;
 
-  meta_shaped_texture_update_area (META_SHAPED_TEXTURE (priv->actor),
-                                   event->area.x,
-                                   event->area.y,
-                                   event->area.width,
-                                   event->area.height,
-                                   clutter_actor_has_mapped_clones (priv->actor) ? NULL : priv->unobscured_region);
-  priv->repaint_scheduled = TRUE;
+  unobscured_region =
+    clutter_actor_has_mapped_clones (CLUTTER_ACTOR (priv->surface))
+    ? NULL : priv->unobscured_region;
+  redraw_queued = meta_surface_actor_damage_area (priv->surface,
+                                                  event->area.x,
+                                                  event->area.y,
+                                                  event->area.width,
+                                                  event->area.height,
+                                                  unobscured_region);
+
+  priv->repaint_scheduled = priv->repaint_scheduled  || redraw_queued;
 }
 
 LOCAL_SYMBOL void
@@ -2159,12 +2107,18 @@ build_and_scan_frame_mask (MetaWindowActor       *self,
   MetaWindowActorPrivate *priv = self->priv;
   guchar *mask_data;
   guint tex_width, tex_height;
+  MetaShapedTexture *stex;
   CoglTexture *paint_tex, *mask_texture;
   int stride;
   cairo_t *cr;
   cairo_surface_t *surface;
 
-  paint_tex = meta_shaped_texture_get_texture (META_SHAPED_TEXTURE (priv->actor));
+  stex = meta_surface_actor_get_texture (priv->surface);
+  g_return_if_fail (stex);
+
+  meta_shaped_texture_set_mask_texture (stex, NULL);
+
+  paint_tex = meta_shaped_texture_get_texture (stex);
   if (paint_tex == NULL)
     return;
 
@@ -2231,8 +2185,7 @@ build_and_scan_frame_mask (MetaWindowActor       *self,
                                                  mask_data);
     }
 
-  meta_shaped_texture_set_mask_texture (META_SHAPED_TEXTURE (priv->actor),
-                                        mask_texture);
+  meta_shaped_texture_set_mask_texture (stex, mask_texture);
   cogl_object_unref (mask_texture);
 
   g_free (mask_data);
@@ -2262,7 +2215,6 @@ meta_window_actor_update_shape_region (MetaWindowActor       *self,
       region = cairo_region_create_rectangle (client_area);
     }
 
-  meta_shaped_texture_set_mask_texture (META_SHAPED_TEXTURE (priv->actor), NULL);
   if ((priv->window->shape_region != NULL) || (priv->window->frame != NULL))
     build_and_scan_frame_mask (self, client_area, region);
 
@@ -2283,7 +2235,6 @@ meta_window_actor_update_input_region (MetaWindowActor       *self,
                                        cairo_rectangle_int_t *client_area)
 {
   MetaWindowActorPrivate *priv = self->priv;
-  MetaShapedTexture *stex = META_SHAPED_TEXTURE (priv->actor);
   cairo_region_t *region = NULL;
 
   if (priv->window->frame != NULL && priv->window->input_region != NULL)
@@ -2298,7 +2249,7 @@ meta_window_actor_update_input_region (MetaWindowActor       *self,
       cairo_region_union (region, priv->window->input_region);
       cairo_region_translate (region, client_area->x, client_area->y);
     }
-  else if (priv->window->shape_region != NULL)
+  else if (priv->window->input_region != NULL)
     {
       region = cairo_region_reference (priv->window->input_region);
     }
@@ -2310,7 +2261,7 @@ meta_window_actor_update_input_region (MetaWindowActor       *self,
       region = cairo_region_create_rectangle (client_area);
     }
 
-  meta_shaped_texture_set_input_shape_region (stex, region);
+  meta_surface_actor_set_input_region (priv->surface, region);
   cairo_region_destroy (region);
 }
 
@@ -2318,8 +2269,7 @@ static void
 meta_window_actor_update_opaque_region (MetaWindowActor *self)
 {
   MetaWindowActorPrivate *priv = self->priv;
-
-  g_clear_pointer (&priv->opaque_region, cairo_region_destroy);
+  cairo_region_t *opaque_region;
 
   if (priv->argb32 && priv->window->opaque_region != NULL)
     {
@@ -2337,122 +2287,18 @@ meta_window_actor_update_opaque_region (MetaWindowActor *self)
        * to be undefined, and considered a client bug. In mutter's
        * case, graphical glitches will occur.
        */
-      priv->opaque_region = cairo_region_copy (priv->window->opaque_region);
-      cairo_region_translate (priv->opaque_region, borders.total.left, borders.total.top);
-      cairo_region_intersect (priv->opaque_region, priv->shape_region);
+      opaque_region = cairo_region_copy (priv->window->opaque_region);
+      cairo_region_translate (opaque_region, borders.total.left, borders.total.top);
+      cairo_region_intersect (opaque_region, priv->shape_region);
     }
   else if (priv->argb32)
-    priv->opaque_region = NULL;
+    opaque_region = NULL;
   else
-    priv->opaque_region = cairo_region_reference (priv->shape_region);
+    opaque_region = cairo_region_reference (priv->shape_region);
+
+  meta_surface_actor_set_opaque_region (priv->surface, opaque_region);
+  cairo_region_destroy (opaque_region);
 }
-
-// static void
-// meta_window_actor_update_shape_region (MetaWindowActor       *self,
-//                                        cairo_rectangle_int_t *client_area)
-// {
-//   MetaWindowActorPrivate *priv = self->priv;
-//   cairo_region_t *region = NULL;
-
-//   if (priv->window->frame != NULL && priv->window->shape_region != NULL)
-//     {
-//       region = cairo_region_copy (priv->window->shape_region);
-//       cairo_region_translate (region, client_area->x, client_area->y);
-//     }
-//   else if (priv->window->shape_region != NULL)
-//     {
-//       region = cairo_region_reference (priv->window->shape_region);
-//     }
-//   else
-//     {
-//       /* If we don't have a shape on the server, that means that
-//        * we have an implicit shape of one rectangle covering the
-//        * entire window. */
-//       region = cairo_region_create_rectangle (client_area);
-//     }
-
-//   meta_shaped_texture_set_mask_texture (META_SHAPED_TEXTURE (priv->actor), NULL);
-//   if ((priv->window->shape_region != NULL) || (priv->window->frame != NULL))
-//     build_and_scan_frame_mask (self, client_area, region);
-
-//   g_clear_pointer (&priv->shape_region, cairo_region_destroy);
-//   priv->shape_region = region;
-
-//   g_clear_pointer (&priv->shadow_shape, meta_window_shape_unref);
-//   meta_window_actor_invalidate_shadow (self);
-// }
-
-// static void
-// meta_window_actor_update_input_region (MetaWindowActor       *self,
-//                                        cairo_rectangle_int_t *client_area)
-// {
-//   MetaWindowActorPrivate *priv = self->priv;
-//   MetaShapedTexture *stex = META_SHAPED_TEXTURE (priv->actor);
-//   cairo_region_t *region = NULL;
-
-//   if (priv->window->frame != NULL && priv->window->input_region != NULL)
-//     {
-//       region = meta_frame_get_frame_bounds (priv->window->frame);
-
-//       cairo_region_subtract_rectangle (region, client_area);
-
-//       /* input_region is in client window coordinates, so translate the
-//        * input region into that coordinate system and back */
-//       cairo_region_translate (region, -client_area->x, -client_area->y);
-//       cairo_region_union (region, priv->window->input_region);
-//       cairo_region_translate (region, client_area->x, client_area->y);
-//     }
-//   else if (priv->window->shape_region != NULL)
-//     {
-//       region = cairo_region_reference (priv->window->input_region);
-//     }
-//   else
-//     {
-//       /* If we don't have a shape on the server, that means that
-//        * we have an implicit shape of one rectangle covering the
-//        * entire window. */
-//       region = cairo_region_create_rectangle (client_area);
-//     }
-
-//   meta_shaped_texture_set_input_shape_region (stex, region);
-//   cairo_region_destroy (region);
-// }
-
-// static void
-// meta_window_actor_update_opaque_region (MetaWindowActor *self)
-// {
-//   MetaWindowActorPrivate *priv = self->priv;
-
-//   g_clear_pointer (&priv->opaque_region, cairo_region_destroy);
-
-//   if (priv->argb32 && priv->window->opaque_region != NULL)
-//     {
-//       MetaFrameBorders borders;
-
-//       meta_frame_calc_borders (priv->window->frame, &borders);
-
-//       /* The opaque region is defined to be a part of the
-//        * window which ARGB32 will always paint with opaque
-//        * pixels. For these regions, we want to avoid painting
-//        * windows and shadows beneath them.
-//        *
-//        * If the client gives bad coordinates where it does not
-//        * fully paint, the behavior is defined by the specification
-//        * to be undefined, and considered a client bug. In mutter's
-//        * case, graphical glitches will occur.
-//        */
-//       priv->opaque_region = cairo_region_copy (priv->window->opaque_region);
-//       cairo_region_translate (priv->opaque_region, borders.total.left, borders.total.top);
-//       cairo_region_intersect (priv->opaque_region, priv->shape_region);
-//     }
-//   else if (priv->argb32)
-//     priv->opaque_region = NULL;
-//   else
-//     priv->opaque_region = cairo_region_reference (priv->shape_region);
-
-//   meta_shaped_texture_set_opaque_region (META_SHAPED_TEXTURE (priv->actor),
-//                                          priv->opaque_region);
-// }
 
 static void
 check_needs_reshape (MetaWindowActor *self)
@@ -2494,7 +2340,7 @@ meta_window_actor_update_shape (MetaWindowActor *self)
   if (is_frozen (self))
     return;
 
-  clutter_actor_queue_redraw (priv->actor);
+  clutter_actor_queue_redraw (CLUTTER_ACTOR (priv->surface));
 }
 
 LOCAL_SYMBOL void
@@ -2700,7 +2546,7 @@ meta_window_actor_update_opacity (MetaWindowActor *self)
     opacity = 255;
 
   self->priv->opacity = opacity;
-  clutter_actor_set_opacity (self->priv->actor, opacity);
+  clutter_actor_set_opacity (CLUTTER_ACTOR (self->priv->surface), opacity);
 }
 
 void

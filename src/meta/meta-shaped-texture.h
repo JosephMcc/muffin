@@ -58,6 +58,9 @@ GType meta_shaped_texture_get_type (void) G_GNUC_CONST;
 
 ClutterActor *meta_shaped_texture_new (void);
 
+void meta_shaped_texture_set_texture (MetaShapedTexture *stex,
+                                      CoglTexture       *texture);
+
 void meta_shaped_texture_set_create_mipmaps (MetaShapedTexture *stex,
 					     gboolean           create_mipmaps);
 
@@ -77,10 +80,6 @@ void meta_shaped_texture_set_mask_texture (MetaShapedTexture *stex,
                                            CoglTexture       *mask_texture);
 void meta_shaped_texture_set_input_shape_region (MetaShapedTexture *stex,
                                                  cairo_region_t    *shape_region);
-
-/* Assumes ownership of clip_region */
-void meta_shaped_texture_set_clip_region (MetaShapedTexture *stex,
-                                          cairo_region_t    *clip_region);
 
 void meta_shaped_texture_set_opaque_region (MetaShapedTexture *stex,
                                             cairo_region_t    *opaque_region);
