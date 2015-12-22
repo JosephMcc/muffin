@@ -54,13 +54,8 @@
 #include <X11/Xatom.h>
 #include <X11/cursorfont.h>
 #include "muffin-enum-types.h"
+#include "meta-idle-monitor-private.h"
 
-#ifdef HAVE_SOLARIS_XINERAMA
-#include <X11/extensions/xinerama.h>
-#endif
-#ifdef HAVE_XFREE_XINERAMA
-#include <X11/extensions/Xinerama.h>
-#endif
 #ifdef HAVE_RANDR
 #include <X11/extensions/Xrandr.h>
 #endif
@@ -908,7 +903,9 @@ meta_display_open (void)
     meta_error_trap_pop (the_display);
   }
   
-  meta_display_ungrab (the_display);  
+  meta_idle_monitor_init_dbus ();
+
+  meta_display_ungrab (the_display);
 
   /* Done opening new display */
   the_display->display_opening = FALSE;
@@ -1641,6 +1638,7 @@ event_callback (XEvent   *event,
   gboolean frame_was_receiver;
   gboolean bypass_compositor;
   gboolean filter_out_event;
+  MetaMonitorManager *monitor;
 
   display = data;
   
@@ -1652,6 +1650,14 @@ event_callback (XEvent   *event,
 #ifdef HAVE_STARTUP_NOTIFICATION
   sn_display_process_event (display->sn_display, event);
 #endif
+
+  /* Intercept XRandR events early and don't attempt any
+     processing for them. We still let them through to Gdk though,
+     so it can update its own internal state.
+  */
+  monitor = meta_monitor_manager_get ();
+  if (meta_monitor_manager_handle_xevent (monitor, event))
+    return FALSE;
   
   bypass_compositor = FALSE;
   filter_out_event = FALSE;
@@ -1726,6 +1732,8 @@ event_callback (XEvent   *event,
           meta_window_update_sync_request_counter (alarm_window, new_counter_value);
           filter_out_event = TRUE; /* GTK doesn't want to see this really */
         }
+      else
+        meta_idle_monitor_handle_xevent_all (event);
     }
 #endif /* HAVE_XSYNC */
 
@@ -2357,31 +2365,7 @@ event_callback (XEvent   *event,
                                                 &event->xconfigure);
         }
       if (window && window->override_redirect)
-	meta_window_configure_notify (window, &event->xconfigure);
-      else
-	/* Handle screen resize */
-	{
-	  MetaScreen *screen;
-
-	  screen = meta_display_screen_for_root (display,
-						 event->xconfigure.window);
-
-	  if (screen != NULL)
-	    {
-#ifdef HAVE_RANDR
-	      /* do the resize the official way */
-	      XRRUpdateConfiguration (event);
-#else
-	      /* poke around in Xlib */
-	      screen->xscreen->width   = event->xconfigure.width;
-	      screen->xscreen->height  = event->xconfigure.height;
-#endif
-	      
-	      meta_screen_resize (screen, 
-				  event->xconfigure.width,
-				  event->xconfigure.height);
-	    }
-	}
+	      meta_window_configure_notify (window, &event->xconfigure);
       break;
     case ConfigureRequest:
       /* This comment and code is found in both twm and fvwm */

@@ -90,4 +90,6 @@ gboolean meta_plugin_manager_show_hud_preview (MetaPluginManager *plugin_mgr,
 
 gboolean meta_plugin_manager_hide_hud_preview (MetaPluginManager *plugin_mgr);
 
+void     meta_plugin_manager_confirm_display_change (MetaPluginManager *mgr);
+
 #endif

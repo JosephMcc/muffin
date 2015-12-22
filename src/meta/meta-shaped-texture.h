@@ -56,14 +56,8 @@ struct _MetaShapedTexture
 
 GType meta_shaped_texture_get_type (void) G_GNUC_CONST;
 
-ClutterActor *meta_shaped_texture_new (void);
-
 void meta_shaped_texture_set_texture (MetaShapedTexture *stex,
                                       CoglTexture       *texture);
-
-gboolean meta_shaped_texture_get_unobscured_bounds (MetaShapedTexture     *stex,
-                                                    cairo_rectangle_int_t *unobscured_bounds);
-gboolean meta_shaped_texture_is_obscured (MetaShapedTexture *self);
 
 void meta_shaped_texture_set_create_mipmaps (MetaShapedTexture *stex,
 					     gboolean           create_mipmaps);
@@ -73,9 +67,6 @@ gboolean meta_shaped_texture_update_area (MetaShapedTexture *stex,
                                           int                y,
                                           int                width,
                                           int                height);
-
-void meta_shaped_texture_set_pixmap (MetaShapedTexture *stex,
-                                     Pixmap             pixmap);
 
 CoglTexture * meta_shaped_texture_get_texture (MetaShapedTexture *stex);
 

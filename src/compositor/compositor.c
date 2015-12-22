@@ -159,18 +159,8 @@ process_damage (MetaCompositor     *compositor,
                 XDamageNotifyEvent *event,
                 MetaWindow         *window)
 {
-  MetaWindowActor *window_actor;
-
-  if (window == NULL)
-    return;
-
-  window_actor = META_WINDOW_ACTOR (meta_window_get_compositor_private (window));
-  if (window_actor == NULL)
-    return;
-
-  meta_window_actor_process_damage (window_actor, event);
-
-  compositor->frame_has_updated_xsurfaces = TRUE;
+  MetaWindowActor *window_actor = META_WINDOW_ACTOR (meta_window_get_compositor_private (window));
+  meta_window_actor_process_x11_damage (window_actor, event);
 }
 
 static Window
@@ -1051,6 +1041,7 @@ sync_actor_stacking (MetaCompScreen *info)
    * we go ahead and do it */
 
   children = clutter_actor_get_children (info->window_group);
+  has_windows = FALSE;
   reordered = FALSE;
 
   /* We allow for actors in the window group other than the actors we

@@ -101,6 +101,10 @@ typedef enum {
   _NET_WM_BYPASS_COMPOSITOR_HINT_OFF = 2,
 } MetaBypassCompositorHintValue;
 
+typedef enum {
+  META_WINDOW_CLIENT_TYPE_X11
+} MetaWindowClientType;
+
 struct _MetaWindow
 {
   GObject parent_instance;
@@ -109,6 +113,7 @@ struct _MetaWindow
   MetaScreen *screen;
   const MetaMonitorInfo *monitor;
   MetaWorkspace *workspace;
+  MetaWindowClientType client_type;
   Window xwindow;
   /* may be NULL! not all windows get decorated */
   MetaFrame *frame;
@@ -211,7 +216,7 @@ struct _MetaWindow
    * been overridden (via a client message), the window will cover the union of
    * these monitors.  If not, this is the single monitor which the window's
    * origin is on. */
-  long fullscreen_monitors[4];
+  gint fullscreen_monitors[4];
   
   /* Whether we're trying to constrain the window to be fully onscreen */
   guint require_fully_onscreen : 1;

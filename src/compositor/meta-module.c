@@ -196,10 +196,7 @@ meta_module_class_init (MetaModuleClass *klass)
 static void
 meta_module_init (MetaModule *self)
 {
-  MetaModulePrivate *priv;
-
-  self->priv = priv = META_MODULE_GET_PRIVATE (self);
-
+  self->priv = META_MODULE_GET_PRIVATE (self);
 }
 
 LOCAL_SYMBOL GType

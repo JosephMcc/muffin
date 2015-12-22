@@ -71,6 +71,7 @@ item(_GNOME_PANEL_ACTION)
 item(_GNOME_PANEL_ACTION_RUN_DIALOG)
 item(_MUFFIN_SENTINEL)
 item(_MUFFIN_VERSION)
+item(_MUFFIN_PRESENTATION_OUTPUT)
 item(WM_CLIENT_MACHINE)
 item(MANAGER)
 item(TARGETS)
@@ -78,6 +79,8 @@ item(MULTIPLE)
 item(TIMESTAMP)
 item(VERSION)
 item(ATOM_PAIR)
+item(Backlight)
+item(hotplug_mode_update)
 
 /* Oddities: These are used, and we need atoms for them,
  * but when we need all _NET_WM hints (i.e. when we're making

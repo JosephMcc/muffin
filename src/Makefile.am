@@ -30,6 +30,8 @@ AM_CPPFLAGS=								\
 	-DGETTEXT_PACKAGE=\"$(GETTEXT_PACKAGE)\"
 
 muffin_built_sources = \
+	$(dbus_idle_built_sources)	\
+	$(dbus_xrandr_built_sources)	\
 	muffin-enum-types.h \
 	muffin-enum-types.c
 
@@ -63,8 +65,11 @@ libmuffin_la_SOURCES =				\
 	compositor/meta-shadow-factory.c	\
 	compositor/meta-shadow-factory-private.h	\
 	compositor/meta-shaped-texture.c	\
+	compositor/meta-shaped-texture-private.h	\
 	compositor/meta-surface-actor.c		\
  	compositor/meta-surface-actor.h		\
+ 	compositor/meta-surface-actor-x11.c	\
+	compositor/meta-surface-actor-x11.h	\
     compositor/meta-sync-ring.c \
     compositor/meta-sync-ring.h \
 	compositor/meta-texture-rectangle.c	\
@@ -100,6 +105,8 @@ libmuffin_la_SOURCES =				\
 	ui/draw-workspace.h			\
 	core/edge-resistance.c			\
 	core/edge-resistance.h			\
+	core/edid-parse.c			\
+	core/edid.h				\
 	core/errors.c				\
 	meta/errors.h				\
 	core/eventqueue.c			\
@@ -118,6 +125,13 @@ libmuffin_la_SOURCES =				\
 	core/keybindings.c			\
 	core/keybindings-private.h		\
 	core/main.c				\
+	core/meta-idle-monitor.c		\
+	core/meta-idle-monitor-private.h	\
+	core/meta-xrandr-shared.h		\
+	core/monitor.c				\
+	core/monitor-config.c			\
+	core/monitor-private.h			\
+	core/monitor-xrandr.c			\
 	core/muffin-Xatomtype.h			\
 	core/place.c				\
 	core/place.h				\
@@ -185,6 +199,7 @@ libmuffininclude_base_headers =		\
 	meta/meta-background-actor.h		\
     meta/meta-background-group.h        \
     meta/meta-background-image.h		\
+    meta/meta-idle-monitor.h		\
 	meta/meta-plugin.h			\
 	meta/meta-shaped-texture.h		\
 	meta/meta-shadow-factory.h		\
@@ -310,6 +325,8 @@ EXTRA_DIST=$(desktopfiles_files) 	\
 	$(desktopfiles_in_files)	\
 	$(xml_in_files)			\
 	org.cinnamon.muffin.gschema.xml.in \
+	idle-monitor.xml \
+	xrandr.xml \
 	libmuffin.pc.in \
 	muffin-plugins.pc.in  \
 	muffin-enum-types.h.in \
@@ -337,3 +354,22 @@ muffin-enum-types.c: stamp-muffin-enum-types.h muffin-enum-types.c.in
 	  $(libmuffininclude_base_headers) ) >> xgen-tetc && \
 	cp xgen-tetc muffin-enum-types.c && \
 	rm -f xgen-tetc
+
+dbus_xrandr_built_sources = meta-dbus-xrandr.c meta-dbus-xrandr.h
+
+$(dbus_xrandr_built_sources) : Makefile.am xrandr.xml
+	$(AM_V_GEN)gdbus-codegen								\
+		--interface-prefix org.cinnamon.Muffin				\
+		--c-namespace MetaDBus								\
+		--generate-c-code meta-dbus-xrandr					\
+		$(srcdir)/xrandr.xml
+
+dbus_idle_built_sources = meta-dbus-idle-monitor.c meta-dbus-idle-monitor.h
+
+$(dbus_idle_built_sources) : Makefile.am idle-monitor.xml
+	$(AM_V_GEN)gdbus-codegen								\
+		--interface-prefix org.cinnamon.Muffin				\
+		--c-namespace MetaDBus								\
+		--generate-c-code meta-dbus-idle-monitor			\
+		--c-generate-object-manager							\
+		$(srcdir)/idle-monitor.xml

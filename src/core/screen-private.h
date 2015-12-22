@@ -38,16 +38,7 @@
 #include <X11/Xutil.h>
 #include "stack-tracker.h"
 #include "ui.h"
-
-typedef struct _MetaMonitorInfo MetaMonitorInfo;
-
-struct _MetaMonitorInfo
-{
-  int number;
-  MetaRectangle rect;
-  gboolean is_primary;
-  XID output; /* The primary or first output for this crtc, None if no xrandr */
-};
+#include "monitor-private.h"
 
 typedef void (* MetaScreenWindowFunc) (MetaScreen *screen, MetaWindow *window,
                                        gpointer user_data);
@@ -103,8 +94,9 @@ struct _MetaScreen
   guint32 wm_sn_timestamp;
   
   MetaMonitorInfo *monitor_infos;
-  int primary_monitor_index;
   int n_monitor_infos;
+  int primary_monitor_index;
+  gboolean has_xinerama_indices;
 
   /* Cache the current monitor */
   int last_monitor_index;
@@ -219,10 +211,6 @@ void meta_screen_calc_workspace_layout (MetaScreen          *screen,
                                         MetaWorkspaceLayout *layout);
 void meta_screen_free_workspace_layout (MetaWorkspaceLayout *layout);
 
-void meta_screen_resize (MetaScreen *screen,
-                         int         width,
-                         int         height);
-
 void     meta_screen_minimize_all_on_active_workspace_except (MetaScreen *screen,
                                                               MetaWindow *keep);
 
@@ -243,4 +231,9 @@ void     meta_screen_workspace_switched (MetaScreen         *screen,
 void meta_screen_set_active_workspace_hint (MetaScreen *screen);
 
 void meta_screen_update_snapped_windows (MetaScreen *screen);
+
+int meta_screen_xinerama_index_to_monitor_index (MetaScreen *screen,
+                                                 int         index);
+int meta_screen_monitor_index_to_xinerama_index (MetaScreen *screen,
+                                                 int         index);
 #endif

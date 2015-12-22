@@ -29,8 +29,8 @@ void meta_window_actor_tile       (MetaWindowActor *self,
                                    MetaRectangle   *old_rect,
                                    MetaRectangle   *new_rect);
 
-void meta_window_actor_process_damage (MetaWindowActor    *self,
-                                       XDamageNotifyEvent *event);
+void meta_window_actor_process_x11_damage (MetaWindowActor    *self,
+                                           XDamageNotifyEvent *event);
 
 void meta_window_actor_pre_paint      (MetaWindowActor    *self);
 void meta_window_actor_post_paint     (MetaWindowActor    *self);

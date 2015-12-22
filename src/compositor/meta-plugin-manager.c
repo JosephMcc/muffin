@@ -85,12 +85,20 @@ meta_plugin_manager_load (const gchar *plugin_name)
   g_free (path);
 }
 
+static void
+on_confirm_display_change (MetaMonitorManager *monitors,
+                           MetaPluginManager  *plugin_mgr)
+{
+  meta_plugin_manager_confirm_display_change (plugin_mgr);
+}
+
 MetaPluginManager *
 meta_plugin_manager_new (MetaScreen *screen)
 {
   MetaPluginManager *plugin_mgr;
   MetaPluginClass *klass;
   MetaPlugin *plugin;
+  MetaMonitorManager *monitors;
 
   plugin_mgr = g_new0 (MetaPluginManager, 1);
   plugin_mgr->screen = screen;
@@ -100,6 +108,10 @@ meta_plugin_manager_new (MetaScreen *screen)
 
   if (klass->start)
     klass->start(plugin);
+
+  monitors = meta_monitor_manager_get ();
+  g_signal_connect (monitors, "confirm-display-change",
+                    G_CALLBACK (on_confirm_display_change), plugin_mgr);
 
   return plugin_mgr;
 }
@@ -394,4 +406,16 @@ meta_plugin_manager_hide_hud_preview (MetaPluginManager *plugin_mgr)
     }
 
     return FALSE;
+}
+
+void
+meta_plugin_manager_confirm_display_change (MetaPluginManager *plugin_mgr)
+{
+  MetaPlugin *plugin = plugin_mgr->plugin;
+  MetaPluginClass *klass = META_PLUGIN_GET_CLASS (plugin);
+
+  if (klass->confirm_display_change)
+    return klass->confirm_display_change (plugin);
+  else
+    return meta_plugin_complete_display_change (plugin, TRUE);
 }

@@ -245,6 +245,9 @@ meta_window_finalize (GObject *object)
   if (window->frame_bounds)
     cairo_region_destroy (window->frame_bounds);
 
+  if (window->shape_region)
+    cairo_region_destroy (window->shape_region);
+
   if (window->opaque_region)
     cairo_region_destroy (window->opaque_region);
 
@@ -772,10 +775,10 @@ meta_window_new (MetaDisplay *display,
  * Returns TRUE if window has been filtered out and should be ignored.
  */
 static gboolean
-maybe_filter_window (MetaDisplay       *display,
-                     Window             xwindow,
-                     gboolean           must_be_viewable,
-                     XWindowAttributes *attrs)
+maybe_filter_xwindow (MetaDisplay       *display,
+                      Window             xwindow,
+                      gboolean           must_be_viewable,
+                      XWindowAttributes *attrs)
 {
   static char **filter_wm_classes = NULL;
   static gboolean initialized = FALSE;
@@ -900,79 +903,22 @@ sync_client_window_mapped (MetaWindow *window)
   meta_error_trap_pop (window->display);
 }
 
-LOCAL_SYMBOL LOCAL_SYMBOL MetaWindow*
-meta_window_new_with_attrs (MetaDisplay       *display,
-                            Window             xwindow,
-                            gboolean           must_be_viewable,
-                            MetaCompEffect     effect,
-                            XWindowAttributes *attrs)
+static MetaWindow*
+meta_window_new_shared (MetaDisplay         *display,
+                        MetaScreen          *screen,
+                        MetaWindowClientType client_type,
+                        Window               xwindow,
+                        gboolean             must_be_viewable,
+                        gulong               existing_wm_state,
+                        gboolean             has_input_shape,
+                        MetaCompEffect       effect,
+                        XWindowAttributes   *attrs)
 {
   MetaWindow *window;
-  GSList *tmp;
   MetaWorkspace *space;
-  gulong existing_wm_state;
-  gulong event_mask;
   MetaMoveResizeFlags flags;
-  gboolean has_input_shape;
-  MetaScreen *screen;
 
   g_assert (attrs != NULL);
-
-  meta_verbose ("Attempting to manage 0x%lx\n", xwindow);
-
-  if (meta_display_xwindow_is_a_no_focus_window (display, xwindow))
-    {
-      meta_verbose ("Not managing no_focus_window 0x%lx\n",
-                    xwindow);
-      return NULL;
-    }
-
-  screen = NULL;
-  for (tmp = display->screens; tmp != NULL; tmp = tmp->next)
-    {
-      MetaScreen *scr = tmp->data;
-
-      if (scr->xroot == attrs->root)
-        {
-          screen = tmp->data;
-          break;
-        }
-    }
-
-  g_assert (screen);
-
-  /* A black list of override redirect windows that we don't need to manage: */
-  if (attrs->override_redirect &&
-      (xwindow == screen->no_focus_window ||
-       xwindow == screen->flash_window ||
-       xwindow == screen->wm_sn_selection_window ||
-       attrs->class == InputOnly ||
-       /* any windows created via meta_create_offscreen_window: */
-       (attrs->x == -100 && attrs->y == -100
-	&& attrs->width == 1 && attrs->height == 1) ||
-       xwindow == screen->wm_cm_selection_window ||
-       xwindow == screen->guard_window ||
-       (display->compositor &&
-        xwindow == XCompositeGetOverlayWindow (display->xdisplay,
-					       screen->xroot)
-       )
-      )
-     ) {
-    meta_verbose ("Not managing our own windows\n");
-    return NULL;
-  }
-
-  if (maybe_filter_window (display, xwindow, must_be_viewable, attrs))
-    {
-      meta_verbose ("Not managing filtered window\n");
-      return NULL;
-    }
-
-  /* Grab server */
-  meta_display_grab (display);
-  meta_error_trap_push (display); /* Push a trap over all of window
-                                   * creation, to reduce XSync() calls
-                                   */
 
   meta_verbose ("must_be_viewable = %d attrs->map_state = %d (%s)\n",
                 must_be_viewable,
@@ -985,95 +931,13 @@ meta_window_new_with_attrs (MetaDisplay       *display,
                 "IsUnviewable" :
                 "(unknown)");
 
-  existing_wm_state = WithdrawnState;
-  if (must_be_viewable && attrs->map_state != IsViewable)
-    {
-      /* Only manage if WM_STATE is IconicState or NormalState */
-      gulong state;
-
-      /* WM_STATE isn't a cardinal, it's type WM_STATE, but is an int */
-      if (!(meta_prop_get_cardinal_with_atom_type (display, xwindow,
-                                                   display->atom_WM_STATE,
-                                                   display->atom_WM_STATE,
-                                                   &state) &&
-            (state == IconicState || state == NormalState)))
-        {
-          meta_verbose ("Deciding not to manage unmapped or unviewable window 0x%lx\n", xwindow);
-          meta_error_trap_pop (display);
-          meta_display_ungrab (display);
-          return NULL;
-        }
-
-      existing_wm_state = state;
-      meta_verbose ("WM_STATE of %lx = %s\n", xwindow,
-                    wm_state_to_string (existing_wm_state));
-    }
-
-  meta_error_trap_push_with_return (display);
-
-  /*
-   * XAddToSaveSet can only be called on windows created by a different client.
-   * with Muffin we want to be able to create manageable windows from within
-   * the process (such as a dummy desktop window), so we do not want this
-   * call failing to prevent the window from being managed -- wrap it in its
-   * own error trap (we use the _with_return() version here to ensure that
-   * XSync() is done on the pop, otherwise the error will not get caught).
-   */
-  meta_error_trap_push_with_return (display);
-  XAddToSaveSet (display->xdisplay, xwindow);
-  meta_error_trap_pop_with_return (display);
-
-  event_mask =
-    PropertyChangeMask | EnterWindowMask | LeaveWindowMask |
-    FocusChangeMask | ColormapChangeMask;
-  if (attrs->override_redirect)
-    event_mask |= StructureNotifyMask;
-
-  /* If the window is from this client (a menu, say) we need to augment
-   * the event mask, not replace it. For windows from other clients,
-   * attrs->your_event_mask will be empty at this point.
-   */
-  XSelectInput (display->xdisplay, xwindow, attrs->your_event_mask | event_mask);
-
-  has_input_shape = FALSE;
-#ifdef HAVE_SHAPE
-  if (META_DISPLAY_HAS_SHAPE (display))
-    XShapeSelectInput (display->xdisplay, xwindow, ShapeNotifyMask);
-#endif
-
-  /* Get rid of any borders */
-  if (attrs->border_width != 0)
-    XSetWindowBorderWidth (display->xdisplay, xwindow, 0);
-
-  /* Get rid of weird gravities */
-  if (attrs->win_gravity != NorthWestGravity)
-    {
-      XSetWindowAttributes set_attrs;
-
-      set_attrs.win_gravity = NorthWestGravity;
-
-      XChangeWindowAttributes (display->xdisplay,
-                               xwindow,
-                               CWWinGravity,
-                               &set_attrs);
-    }
-
-  if (meta_error_trap_pop_with_return (display) != Success)
-    {
-      meta_verbose ("Window 0x%lx disappeared just as we tried to manage it\n",
-                    xwindow);
-      meta_error_trap_pop (display);
-      meta_display_ungrab (display);
-      return NULL;
-    }
-
-
   window = g_object_new (META_TYPE_WINDOW, NULL);
 
   window->constructing = TRUE;
 
   window->dialog_pid = -1;
 
+  window->client_type = client_type;
   window->xwindow = xwindow;
 
   /* this is in window->screen->display, but that's too annoying to
@@ -1569,10 +1433,14 @@ meta_window_new_with_attrs (MetaDisplay       *display,
       !window->initially_iconic)
     unminimize_window_and_all_transient_parents (window);
 
-  meta_error_trap_pop (display); /* pop the XSync()-reducing trap */
-  meta_display_ungrab (display);
-
   window->constructing = FALSE;
+
+  return window;
+}
+
+static void
+display_notify_window (MetaDisplay *display, MetaWindow *window)
+{
 
   meta_display_notify_window_created (display, window);
 
@@ -1581,7 +1449,180 @@ meta_window_new_with_attrs (MetaDisplay       *display,
 
   if (window->wm_hints_urgent)
     g_signal_emit_by_name (window->display, "window-marked-urgent", window);
+}
 
+MetaWindow*
+meta_window_new_with_attrs (MetaDisplay       *display,
+                            Window             xwindow,
+                            gboolean           must_be_viewable,
+                            MetaCompEffect     effect,
+                            XWindowAttributes *attrs)
+{
+  MetaScreen *screen = NULL;
+  GSList *tmp;
+  gulong existing_wm_state;
+  MetaWindow *window;
+  gulong event_mask;
+  gboolean has_input_shape = FALSE;
+
+  meta_verbose ("Attempting to manage 0x%lx\n", xwindow);
+
+  if (meta_display_xwindow_is_a_no_focus_window (display, xwindow))
+    {
+      meta_verbose ("Not managing no_focus_window 0x%lx\n",
+                    xwindow);
+      return NULL;
+    }
+
+  for (tmp = display->screens; tmp != NULL; tmp = tmp->next)
+    {
+      MetaScreen *scr = tmp->data;
+
+      if (scr->xroot == attrs->root)
+        {
+          screen = tmp->data;
+          break;
+        }
+    }
+
+  g_assert (screen);
+
+  /* A black list of override redirect windows that we don't need to manage: */
+  if (attrs->override_redirect &&
+      (xwindow == screen->no_focus_window ||
+       xwindow == screen->flash_window ||
+       xwindow == screen->wm_sn_selection_window ||
+       attrs->class == InputOnly ||
+       /* any windows created via meta_create_offscreen_window: */
+       (attrs->x == -100 && attrs->y == -100 &&
+        attrs->width == 1 && attrs->height == 1) ||
+        xwindow == screen->wm_cm_selection_window ||
+        xwindow == screen->guard_window ||
+       (display->compositor &&
+        xwindow == XCompositeGetOverlayWindow (display->xdisplay,
+                screen->xroot)
+       )
+      )
+     ) {
+    meta_verbose ("Not managing our own windows\n");
+    return NULL;
+  }
+
+  if (maybe_filter_xwindow (display, xwindow, must_be_viewable, attrs))
+    {
+      meta_verbose ("Not managing filtered window\n");
+      return NULL;
+    }
+
+  /* Grab server */
+  meta_display_grab (display);
+  meta_error_trap_push (display); /* Push a trap over all of window
+                                   * creation, to reduce XSync() calls
+                                   */
+
+  existing_wm_state = WithdrawnState;
+  if (must_be_viewable && attrs->map_state != IsViewable)
+    {
+      /* Only manage if WM_STATE is IconicState or NormalState */
+      gulong state;
+
+      /* WM_STATE isn't a cardinal, it's type WM_STATE, but is an int */
+      if (!(meta_prop_get_cardinal_with_atom_type (display, xwindow,
+                                                   display->atom_WM_STATE,
+                                                   display->atom_WM_STATE,
+                                                   &state) &&
+            (state == IconicState || state == NormalState)))
+        {
+          meta_verbose ("Deciding not to manage unmapped or unviewable window 0x%lx\n", xwindow);
+          meta_error_trap_pop (display);
+          meta_display_ungrab (display);
+          return NULL;
+        }
+
+      existing_wm_state = state;
+      meta_verbose ("WM_STATE of %lx = %s\n", xwindow,
+                    wm_state_to_string (existing_wm_state));
+    }
+
+  meta_error_trap_push_with_return (display);
+
+  /*
+   * XAddToSaveSet can only be called on windows created by a different
+   * client.  with Mutter we want to be able to create manageable windows
+   * from within the process (such as a dummy desktop window), so we do not
+   * want this call failing to prevent the window from being managed -- wrap
+   * it in its own error trap (we use the _with_return() version here to
+   * ensure that XSync() is done on the pop, otherwise the error will not
+   * get caught).
+   */
+  meta_error_trap_push_with_return (display);
+  XAddToSaveSet (display->xdisplay, xwindow);
+  meta_error_trap_pop_with_return (display);
+
+  event_mask =
+    PropertyChangeMask | EnterWindowMask | LeaveWindowMask |
+    FocusChangeMask | ColormapChangeMask;
+  if (attrs->override_redirect)
+    event_mask |= StructureNotifyMask;
+
+  /* If the window is from this client (a menu, say) we need to augment
+   * the event mask, not replace it. For windows from other clients,
+   * attrs->your_event_mask will be empty at this point.
+   */
+  XSelectInput (display->xdisplay, xwindow, attrs->your_event_mask | event_mask);
+
+  has_input_shape = FALSE;
+#ifdef HAVE_SHAPE
+  if (META_DISPLAY_HAS_SHAPE (display))
+    XShapeSelectInput (display->xdisplay, xwindow, ShapeNotifyMask);
+#endif
+
+  /* Get rid of any borders */
+  if (attrs->border_width != 0)
+    XSetWindowBorderWidth (display->xdisplay, xwindow, 0);
+
+  /* Get rid of weird gravities */
+  if (attrs->win_gravity != NorthWestGravity)
+    {
+      XSetWindowAttributes set_attrs;
+
+      set_attrs.win_gravity = NorthWestGravity;
+
+      XChangeWindowAttributes (display->xdisplay,
+                               xwindow,
+                               CWWinGravity,
+                               &set_attrs);
+    }
+
+  if (meta_error_trap_pop_with_return (display) != Success)
+    {
+      meta_verbose ("Window 0x%lx disappeared just as we tried to manage it\n",
+                    xwindow);
+      meta_error_trap_pop (display);
+      meta_display_ungrab (display);
+      return NULL;
+    }
+
+  window = meta_window_new_shared (display,
+                                   screen,
+                                   META_WINDOW_CLIENT_TYPE_X11,
+                                   xwindow,
+                                   must_be_viewable,
+                                   existing_wm_state,
+                                   has_input_shape,
+                                   effect,
+                                   attrs);
+
+  meta_error_trap_pop (display); /* pop the XSync()-reducing trap */
+  meta_display_ungrab (display);
+
+  /* XXX: Maybe this could be called in meta_window_new_shared() but
+   * before splitting the X11 specific code out it came after the
+   * meta_display_ungrab() and we wanted to minimize the risk of
+   * breaking something.
+   */
+  display_notify_window (display, window);
+ 
   return window;
 }
 
@@ -2198,10 +2239,14 @@ set_net_wm_state (MetaWindow *window)
 
   if (window->fullscreen)
     {
-      data[0] = window->fullscreen_monitors[0];
-      data[1] = window->fullscreen_monitors[1];
-      data[2] = window->fullscreen_monitors[2];
-      data[3] = window->fullscreen_monitors[3];
+      data[0] = meta_screen_monitor_index_to_xinerama_index (window->screen,
+                                                             window->fullscreen_monitors[0]);
+      data[1] = meta_screen_monitor_index_to_xinerama_index (window->screen,
+                                                             window->fullscreen_monitors[1]);
+      data[2] = meta_screen_monitor_index_to_xinerama_index (window->screen,
+                                                             window->fullscreen_monitors[2]);
+      data[3] = meta_screen_monitor_index_to_xinerama_index (window->screen,
+                                                             window->fullscreen_monitors[3]);
 
       meta_verbose ("Setting _NET_WM_FULLSCREEN_MONITORS\n");
       meta_error_trap_push (window->display);
@@ -4845,7 +4890,8 @@ meta_window_update_for_monitors_changed (MetaWindow *window)
     {
       MetaMonitorInfo *info = &window->screen->monitor_infos[i];
 
-      if (info->output == old->output)
+      if (info->output_id != 0 &&
+          info->output_id == old->output_id)
         {
           new = info;
           break;
@@ -7218,10 +7264,14 @@ meta_window_client_message (MetaWindow *window,
       meta_verbose ("_NET_WM_FULLSCREEN_MONITORS request for window '%s'\n",
                     window->desc);
 
-      top = event->xclient.data.l[0];
-      bottom = event->xclient.data.l[1];
-      left = event->xclient.data.l[2];
-      right = event->xclient.data.l[3];
+      top = meta_screen_xinerama_index_to_monitor_index (window->screen,
+                                                         event->xclient.data.l[0]);
+      bottom = meta_screen_xinerama_index_to_monitor_index (window->screen,
+                                                            event->xclient.data.l[1]);
+      left = meta_screen_xinerama_index_to_monitor_index (window->screen,
+                                                          event->xclient.data.l[2]);
+      right = meta_screen_xinerama_index_to_monitor_index (window->screen,
+                                                           event->xclient.data.l[3]);
       /* source_indication = event->xclient.data.l[4]; */
 
       meta_window_update_fullscreen_monitors (window, top, bottom, left, right);

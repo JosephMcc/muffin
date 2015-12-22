@@ -129,6 +129,21 @@ struct _MetaPluginClass
   gboolean (*xevent_filter) (MetaPlugin       *plugin,
                              XEvent           *event);
 
+     /**
+   * MetaPluginClass::confirm_display_config:
+   * @plugin: a #MetaPlugin
+   *
+   * Virtual function called when the display configuration changes.
+   * The common way to implement this function is to show some form
+   * of modal dialog that should ask the user if everything was ok.
+   *
+   * When confirmed by the user, the plugin must call meta_plugin_complete_display_change()
+   * to make the configuration permanent. If that function is not
+   * called within the timeout, the previous configuration will be
+   * reapplied.
+   */
+  void (*confirm_display_change) (MetaPlugin *plugin);
+
   const MetaPluginInfo * (*plugin_info) (MetaPlugin *plugin);
 };
 
@@ -264,6 +279,10 @@ meta_plugin_map_completed (MetaPlugin      *plugin,
 void
 meta_plugin_destroy_completed (MetaPlugin      *plugin,
                                MetaWindowActor *actor);
+
+void
+meta_plugin_complete_display_change (MetaPlugin *plugin,
+                                     gboolean    ok);
 
 /**
  * MetaModalOptions:

@@ -83,6 +83,8 @@ src/muffin.desktop
 src/org.cinnamon.muffin.gschema.valid
 src/org.cinnamon.muffin.gschema.xml
 src/stamp-muffin-enum-types.h
+src/meta-dbus-xrandr.[ch]
+src/meta-dbus-idle-monitor.[ch]
 src/testasyncgetprop
 src/testboxes
 src/testgradient
