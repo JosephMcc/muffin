@@ -33,6 +33,16 @@ CoglTexture * meta_create_color_texture_4ub (guint8           red,
                                              CoglTextureFlags flags);
 CoglPipeline * meta_create_texture_pipeline (CoglTexture *texture);
 
+typedef enum {
+  META_TEXTURE_FLAGS_NONE = 0,
+  META_TEXTURE_ALLOW_SLICING = 1 << 1
+} MetaTextureFlags;
+
+CoglTexture *meta_create_texture (int                   width,
+                                  int                   height,
+                                  CoglTextureComponents components,
+                                  MetaTextureFlags      flags);
+
 CoglTexture * meta_cogl_texture_new_from_data_wrapper                (int  width,
                                                                       int  height,
                                                          CoglTextureFlags  flags,
