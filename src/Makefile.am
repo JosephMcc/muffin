@@ -48,8 +48,10 @@ libmuffin_la_SOURCES =				\
 	compositor/compositor.c			\
 	compositor/compositor-private.h		\
     compositor/meta-background.c        \
+    compositor/meta-background-private.h	\
 	compositor/meta-background-actor.c	\
 	compositor/meta-background-actor-private.h	\
+	compositor/meta-background-image.c	\
     compositor/meta-background-group.c  \
     compositor/meta-background-group-private.h  \
 	compositor/meta-module.c		\
@@ -77,6 +79,7 @@ libmuffin_la_SOURCES =				\
 	meta/compositor.h			\
     meta/meta-background.h          \
 	meta/meta-background-actor.h		\
+	meta/meta-background-image.h		\
     meta/meta-background-group.h        \
 	meta/meta-plugin.h			\
 	meta/meta-shadow-factory.h		\
@@ -175,9 +178,10 @@ libmuffininclude_base_headers =		\
 	meta/group.h				\
 	meta/keybindings.h			\
 	meta/main.h				\
+	meta/meta-background.h			\
 	meta/meta-background-actor.h		\
+	meta/meta-background-image.h		\
     meta/meta-background-group.h        \
-    meta/meta-background.h          \
 	meta/meta-plugin.h			\
 	meta/meta-shaped-texture.h		\
 	meta/meta-shadow-factory.h		\

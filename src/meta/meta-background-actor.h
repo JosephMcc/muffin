@@ -24,10 +24,8 @@
 #define META_BACKGROUND_ACTOR_H
 
 #include <clutter/clutter.h>
-#include <cogl/cogl.h>
-
-#include <meta/gradient.h>
 #include <meta/screen.h>
+#include <meta/meta-background.h>
 
 #include <libcinnamon-desktop/cdesktop-enums.h>
 
@@ -52,6 +50,7 @@ typedef struct _MetaBackgroundActorPrivate MetaBackgroundActorPrivate;
 
 struct _MetaBackgroundActorClass
 {
+	/*< private >*/
   ClutterActorClass parent_class;
 };
 
@@ -64,6 +63,15 @@ struct _MetaBackgroundActor
 
 GType meta_background_actor_get_type (void);
 
-ClutterActor *meta_background_actor_new (void);
+ClutterActor *meta_background_actor_new    (MetaScreen *screen,
+                                            int         monitor);
+
+void meta_background_actor_set_background  (MetaBackgroundActor *self,
+                                            MetaBackground      *background);
+
+void meta_background_actor_set_vignette (MetaBackgroundActor *self,
+                                         gboolean             enabled,
+                                         double               brightness,
+                                         double               sharpness);
 
 #endif /* META_BACKGROUND_ACTOR_H */
