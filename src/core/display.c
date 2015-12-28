@@ -55,12 +55,6 @@
 #include <X11/cursorfont.h>
 #include "muffin-enum-types.h"
 
-#ifdef HAVE_SOLARIS_XINERAMA
-#include <X11/extensions/xinerama.h>
-#endif
-#ifdef HAVE_XFREE_XINERAMA
-#include <X11/extensions/Xinerama.h>
-#endif
 #ifdef HAVE_RANDR
 #include <X11/extensions/Xrandr.h>
 #endif
