@@ -51,6 +51,7 @@
 #include "workspace-private.h"
 #include "bell.h"
 #include <meta/compositor.h>
+#include <meta/compositor-muffin.h>
 #include <X11/Xatom.h>
 #include <X11/cursorfont.h>
 #include "muffin-enum-types.h"
@@ -125,6 +126,14 @@ typedef struct
   MetaDisplay *display;
   Window xwindow;
 } MetaAutoRaiseData;
+
+typedef struct
+{
+  MetaDisplay *display;
+  MetaWindow *window;
+  int pointer_x;
+  int pointer_y;
+} MetaFocusData;
 
 G_DEFINE_TYPE(MetaDisplay, meta_display, G_TYPE_OBJECT);
 
@@ -1036,6 +1045,10 @@ meta_display_close (MetaDisplay *display,
   
   meta_display_remove_autoraise_callback (display);
 
+  if (display->focus_timeout_id)
+    g_source_remove (display->focus_timeout_id);
+  display->focus_timeout_id = 0;
+
   if (display->grab_old_window_stacking)
     g_list_free (display->grab_old_window_stacking);
   
@@ -1566,6 +1579,103 @@ window_raise_with_delay_callback (void *data)
   return FALSE;
 }
 
+static void
+meta_display_mouse_mode_focus (MetaDisplay *display,
+                               MetaWindow  *window,
+                               guint32      timestamp) {
+  if (window->type != META_WINDOW_DESKTOP)
+    {
+      meta_topic (META_DEBUG_FOCUS,
+                  "Focusing %s at time %u.\n", window->desc, timestamp);
+
+      meta_window_focus (window, timestamp);
+
+      if (meta_prefs_get_auto_raise ())
+        meta_display_queue_autoraise_callback (display, window);
+      else
+        meta_topic (META_DEBUG_FOCUS, "Auto raise is disabled\n");
+    }
+  else
+    {
+      /* In mouse focus mode, we defocus when the mouse *enters*
+       * the DESKTOP window, instead of defocusing on LeaveNotify.
+       * This is because having the mouse enter override-redirect
+       * child windows unfortunately causes LeaveNotify events that
+       * we can't distinguish from the mouse actually leaving the
+       * toplevel window as we expect.  But, since we filter out
+       * EnterNotify events on override-redirect windows, this
+       * alternative mechanism works great.
+       */
+      if (meta_prefs_get_focus_mode() == C_DESKTOP_FOCUS_MODE_MOUSE &&
+          display->expected_focus_window != NULL)
+        {
+          meta_topic (META_DEBUG_FOCUS,
+                      "Unsetting focus from %s due to mouse entering "
+                      "the DESKTOP window\n",
+                      display->expected_focus_window->desc);
+          meta_display_focus_the_no_focus_window (display,
+                                                  window->screen,
+                                                  timestamp);
+        }
+    }
+}
+
+static gboolean
+window_focus_on_pointer_rest_callback (gpointer data) {
+  MetaFocusData *focus_data;
+  MetaDisplay *display;
+  MetaScreen *screen;
+  MetaWindow *window;
+  Window root, child;
+  int root_x, root_y, x, y;
+  guint32 timestamp;
+  guint mask;
+
+  focus_data = data;
+  display = focus_data->display;
+  screen = focus_data->window->screen;
+
+  if (meta_prefs_get_focus_mode () == C_DESKTOP_FOCUS_MODE_CLICK)
+    goto out;
+
+  meta_error_trap_push (display);
+  XQueryPointer (display->xdisplay,
+                 screen->xroot,
+                 &root, &child,
+                 &root_x, &root_y, &x, &y, &mask);
+  meta_error_trap_pop (display);
+
+  if (root_x != focus_data->pointer_x ||
+      root_y != focus_data->pointer_y)
+    {
+      focus_data->pointer_x = root_x;
+      focus_data->pointer_y = root_y;
+      return TRUE;
+    }
+
+  /* Explicitly check for the overlay window, as get_focus_window_at_point()
+   * may return windows that extend underneath the chrome (like
+   * override-redirect or DESKTOP windows)
+   */
+  if (child == meta_get_overlay_window (screen))
+    goto out;
+
+  window =
+      meta_stack_get_default_focus_window_at_point (screen->stack,
+                                                    screen->active_workspace,
+                                                    None, root_x, root_y);
+
+  if (window == NULL)
+    goto out;
+
+  timestamp = meta_display_get_current_time_roundtrip (display);
+  meta_display_mouse_mode_focus (display, window, timestamp);
+
+out:
+  display->focus_timeout_id = 0;
+  return FALSE;
+}
+
 LOCAL_SYMBOL void
 meta_display_queue_autoraise_callback (MetaDisplay *display,
                                        MetaWindow  *window)
@@ -1593,6 +1703,37 @@ meta_display_queue_autoraise_callback (MetaDisplay *display,
                         auto_raise_data,
                         g_free);
   display->autoraise_window = window;
+}
+
+/* The interval, in milliseconds, we use in focus-follows-mouse
+ * mode to check whether the pointer has stopped moving after a
+ * crossing event.
+ */
+#define FOCUS_TIMEOUT_DELAY 25
+
+static void
+meta_display_queue_focus_callback (MetaDisplay *display,
+                                   MetaWindow  *window,
+                                   int          pointer_x,
+                                   int          pointer_y)
+{
+  MetaFocusData *focus_data;
+
+  focus_data = g_new (MetaFocusData, 1);
+  focus_data->display = display;
+  focus_data->window = window;
+  focus_data->pointer_x = pointer_x;
+  focus_data->pointer_y = pointer_y;
+
+  if (display->focus_timeout_id != 0)
+    g_source_remove (display->focus_timeout_id);
+
+  display->focus_timeout_id =
+    g_timeout_add_full (G_PRIORITY_DEFAULT,
+                        FOCUS_TIMEOUT_DELAY,
+                        window_focus_on_pointer_rest_callback,
+                        focus_data,
+                        g_free);
 }
 
 #if 0
@@ -1870,9 +2011,9 @@ event_callback (XEvent   *event,
            * in a keyboard-grabbed mode like moving a window, we don't
            * want to pass the key event to the compositor or GTK+ at all.
            */
-          if (display->grab_window == window &&
-              meta_grab_op_is_mouse (display->grab_op))
-              meta_window_handle_keyboard_grab_op_event (window, (XIDeviceEvent *) input_event);
+          // if (display->grab_window == window &&
+          //     meta_grab_op_is_mouse (display->grab_op))
+          //     meta_window_handle_keyboard_grab_op_event (window, (XIDeviceEvent *) input_event);
 
           if (meta_display_process_key_event (display, window, (XIDeviceEvent *) input_event))
             filter_out_event = bypass_compositor = TRUE;
@@ -1880,23 +2021,28 @@ event_callback (XEvent   *event,
        case XI_ButtonPress:
           if (display->grab_op == META_GRAB_OP_COMPOSITOR)
             break;
-          if (display->mouse_zoom_modifiers > 0 && (device_event->detail == 4 || device_event->detail == 5))
-            {
-              if ((device_event->mods.effective & ~display->ignored_modifier_mask) == display->mouse_zoom_modifiers)
-                {
-                  if (device_event->detail == 4)
-                    {
-                      g_signal_emit (display, display_signals[ZOOM_SCROLL_IN], 0);
-                    }
 
-                  if (device_event->detail == 5)
-                    {
-                      g_signal_emit (display, display_signals[ZOOM_SCROLL_OUT], 0);
-                    }
-                  filter_out_event = bypass_compositor = TRUE;
-                }
-              break;
-            }
+          if (device_event->detail == 4 || device_event->detail == 5)
+            /* Scrollwheel event, do nothing and deliver event to compositor below */
+            break;
+
+          // if (display->mouse_zoom_modifiers > 0 && (device_event->detail == 4 || device_event->detail == 5))
+          //   {
+          //     if ((device_event->mods.effective & ~display->ignored_modifier_mask) == display->mouse_zoom_modifiers)
+          //       {
+          //         if (device_event->detail == 4)
+          //           {
+          //             g_signal_emit (display, display_signals[ZOOM_SCROLL_IN], 0);
+          //           }
+
+          //         if (device_event->detail == 5)
+          //           {
+          //             g_signal_emit (display, display_signals[ZOOM_SCROLL_OUT], 0);
+          //           }
+          //         filter_out_event = bypass_compositor = TRUE;
+          //       }
+          //     break;
+          //   }
 
           if ((window &&
                meta_grab_op_is_mouse (display->grab_op) &&
@@ -2135,52 +2281,26 @@ event_callback (XEvent   *event,
                 case C_DESKTOP_FOCUS_MODE_SLOPPY:
                 case C_DESKTOP_FOCUS_MODE_MOUSE:
                   display->mouse_mode = TRUE;
-                  if (window->type != META_WINDOW_DOCK &&
-                      window->type != META_WINDOW_DESKTOP)
+                  if (window->type != META_WINDOW_DOCK)
                     {
                       meta_topic (META_DEBUG_FOCUS,
-                                  "Focusing %s due to enter notify with serial %lu "
-                                  "at time %lu, and setting display->mouse_mode to "
-                                  "TRUE.\n",
+                                  "Queuing a focus change for %s due to "
+                                  "enter notify with serial %lu at time %lu, "
+                                  "and setting display->mouse_mode to TRUE.\n",
                                   window->desc, 
                                   event->xany.serial,
                                   enter_event->time);
 
-                      meta_window_focus (window, enter_event->time);
+                      if (meta_prefs_get_focus_change_on_pointer_rest())
+                        meta_display_queue_focus_callback (display, window,
+                                                           enter_event->root_x,
+                                                           enter_event->root_y);
+                      else
+                        meta_display_mouse_mode_focus (display, window,
+                                                       enter_event->time);
 
                       /* stop ignoring stuff */
                       reset_ignored_crossing_serials (display);
-                      
-                      if (meta_prefs_get_auto_raise ()) 
-                        {
-                          meta_display_queue_autoraise_callback (display, window);
-                        }
-                      else
-                        {
-                          meta_topic (META_DEBUG_FOCUS,
-                                      "Auto raise is disabled\n");          
-                        }
-                    }
-                  /* In mouse focus mode, we defocus when the mouse *enters*
-                   * the DESKTOP window, instead of defocusing on LeaveNotify.
-                   * This is because having the mouse enter override-redirect
-                   * child windows unfortunately causes LeaveNotify events that
-                   * we can't distinguish from the mouse actually leaving the
-                   * toplevel window as we expect.  But, since we filter out
-                   * EnterNotify events on override-redirect windows, this
-                   * alternative mechanism works great.
-                   */
-                  if (window->type == META_WINDOW_DESKTOP &&
-                      meta_prefs_get_focus_mode() == C_DESKTOP_FOCUS_MODE_MOUSE &&
-                      display->expected_focus_window != NULL)
-                    {
-                      meta_topic (META_DEBUG_FOCUS,
-                                  "Unsetting focus from %s due to mouse entering "
-                                  "the DESKTOP window\n",
-                                  display->expected_focus_window->desc);
-                      meta_display_focus_the_no_focus_window (display, 
-                                                              window->screen,
-                                                              enter_event->time);
                     }
                   break;
                 case C_DESKTOP_FOCUS_MODE_CLICK:

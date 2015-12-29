@@ -102,6 +102,7 @@ static gboolean application_based = FALSE;
 static gboolean disable_workarounds = FALSE;
 static gboolean auto_raise = FALSE;
 static gboolean auto_raise_delay = 500;
+static gboolean focus_change_on_pointer_rest = FALSE;
 static gboolean bell_is_visible = FALSE;
 static gboolean bell_is_audible = TRUE;
 static gboolean gnome_accessibility = FALSE;
@@ -362,6 +363,13 @@ static MetaBoolPreference preferences_bool[] =
         META_PREF_AUTO_RAISE,
       },
       &auto_raise,
+    },
+    {
+      { "focus-change-on-pointer-rest",
+        SCHEMA_MUFFIN,
+        META_PREF_FOCUS_CHANGE_ON_POINTER_REST,
+      },
+      &focus_change_on_pointer_rest
     },
     {
       { "visual-bell",
@@ -1841,6 +1849,9 @@ meta_preference_to_string (MetaPreference pref)
     case META_PREF_AUTO_RAISE_DELAY:
       return "AUTO_RAISE_DELAY";
 
+    case META_PREF_FOCUS_CHANGE_ON_POINTER_REST:
+      return "FOCUS_CHANGE_ON_POINTER_REST";
+
     case META_PREF_BUTTON_LAYOUT:
       return "BUTTON_LAYOUT";
 
@@ -2373,6 +2384,12 @@ int
 meta_prefs_get_auto_raise_delay (void)
 {
   return auto_raise_delay;
+}
+
+gboolean
+meta_prefs_get_focus_change_on_pointer_rest ()
+{
+  return focus_change_on_pointer_rest;
 }
 
 gboolean
