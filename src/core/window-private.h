@@ -669,7 +669,8 @@ gboolean meta_window_property_notify   (MetaWindow *window,
 gboolean meta_window_client_message    (MetaWindow *window,
                                         XEvent     *event);
 gboolean meta_window_notify_focus      (MetaWindow *window,
-                                        XEvent     *event);
+                                        XIEnterEvent *event);
+void     meta_window_lost_focus        (MetaWindow *window);
 
 void     meta_window_set_current_workspace_hint (MetaWindow *window);
 
@@ -692,11 +693,11 @@ void meta_window_set_gravity (MetaWindow *window,
                                                gint64      new_counter_value);
 #endif /* HAVE_XSYNC */
 
-void meta_window_handle_mouse_grab_op_event (MetaWindow *window,
-                                             XEvent     *event);
+void meta_window_handle_mouse_grab_op_event (MetaWindow    *window,
+                                             XIDeviceEvent *xev);
 
-void meta_window_handle_keyboard_grab_op_event (MetaWindow *window,
-                                                XEvent     *event);
+void meta_window_handle_keyboard_grab_op_event (MetaWindow    *window,
+                                                XIDeviceEvent *xev);
 
 GList* meta_window_get_workspaces (MetaWindow *window);
 
