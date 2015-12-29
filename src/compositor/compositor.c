@@ -206,23 +206,26 @@ get_output_window (MetaScreen *screen)
   Window       output, xroot;
   XWindowAttributes attr;
   long         event_mask;
+  unsigned char mask_bits[XIMaskLen (XI_LASTEVENT)] = { 0 };
+  XIEventMask mask = { XIAllMasterDevices, sizeof (mask_bits), mask_bits };
 
   xroot = meta_screen_get_xroot (screen);
-
-  event_mask = FocusChangeMask |
-               ExposureMask |
-               EnterWindowMask | LeaveWindowMask |
-	       PointerMotionMask |
-               PropertyChangeMask |
-               ButtonPressMask | ButtonReleaseMask |
-               KeyPressMask | KeyReleaseMask;
-
   output = XCompositeGetOverlayWindow (xdisplay, xroot);
 
+  XISetMask (mask.mask, XI_KeyPress);
+  XISetMask (mask.mask, XI_KeyRelease);
+  XISetMask (mask.mask, XI_ButtonPress);
+  XISetMask (mask.mask, XI_ButtonRelease);
+  XISetMask (mask.mask, XI_Enter);
+  XISetMask (mask.mask, XI_Leave);
+  XISetMask (mask.mask, XI_FocusIn);
+  XISetMask (mask.mask, XI_FocusOut);
+  XISetMask (mask.mask, XI_Motion);
+  XISelectEvents (xdisplay, output, &mask, 1);
+
+  event_mask = ExposureMask | PropertyChangeMask;
   if (XGetWindowAttributes (xdisplay, output, &attr))
-      {
-        event_mask |= attr.your_event_mask;
-      }
+    event_mask |= attr.your_event_mask;
 
   XSelectInput (xdisplay, output, event_mask);
 
@@ -601,8 +604,6 @@ meta_compositor_manage_screen (MetaCompositor *compositor,
   Display        *xdisplay      = meta_display_get_xdisplay (display);
   Window          xwin;
   gint            width, height;
-  XWindowAttributes attr;
-  long            event_mask;
 
   /* Check if the screen is already managed */
   if (meta_screen_get_compositor_data (screen))
@@ -647,21 +648,29 @@ meta_compositor_manage_screen (MetaCompositor *compositor,
 
   XResizeWindow (xdisplay, xwin, width, height);
 
-  event_mask = FocusChangeMask |
-               ExposureMask |
-               EnterWindowMask | LeaveWindowMask |
-               PointerMotionMask |
-               PropertyChangeMask |
-               ButtonPressMask | ButtonReleaseMask |
-               KeyPressMask | KeyReleaseMask |
-               StructureNotifyMask;
+  {
+    long event_mask;
+    unsigned char mask_bits[XIMaskLen (XI_LASTEVENT)] = { 0 };
+    XIEventMask mask = { XIAllMasterDevices, sizeof (mask_bits), mask_bits };
+    XWindowAttributes attr;
 
-  if (XGetWindowAttributes (xdisplay, xwin, &attr))
-      {
-        event_mask |= attr.your_event_mask;
-      }
+    XISetMask (mask.mask, XI_KeyPress);
+    XISetMask (mask.mask, XI_KeyRelease);
+    XISetMask (mask.mask, XI_ButtonPress);
+    XISetMask (mask.mask, XI_ButtonRelease);
+    XISetMask (mask.mask, XI_Enter);
+    XISetMask (mask.mask, XI_Leave);
+    XISetMask (mask.mask, XI_FocusIn);
+    XISetMask (mask.mask, XI_FocusOut);
+    XISetMask (mask.mask, XI_Motion);
+    XISelectEvents (xdisplay, xwin, &mask, 1);
 
-  XSelectInput (xdisplay, xwin, event_mask);
+    event_mask = ExposureMask | PropertyChangeMask | StructureNotifyMask;
+    if (XGetWindowAttributes (xdisplay, xwin, &attr))
+      event_mask |= attr.your_event_mask;
+
+    XSelectInput (xdisplay, xwin, event_mask);
+  }
 
   info->window_group = meta_window_group_new (screen);
   info->bottom_window_group = clutter_actor_new ();
