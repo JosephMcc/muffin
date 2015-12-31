@@ -2015,9 +2015,9 @@ event_callback (XEvent   *event,
            * in a keyboard-grabbed mode like moving a window, we don't
            * want to pass the key event to the compositor or GTK+ at all.
            */
-          // if (display->grab_window == window &&
-          //     meta_grab_op_is_mouse (display->grab_op))
-          //     meta_window_handle_keyboard_grab_op_event (window, (XIDeviceEvent *) input_event);
+          if (display->grab_window == window &&
+              meta_grab_op_is_mouse (display->grab_op))
+              meta_window_handle_keyboard_grab_op_event (window, (XIDeviceEvent *) input_event);
 
           if (meta_display_process_key_event (display, window, (XIDeviceEvent *) input_event))
             filter_out_event = bypass_compositor = TRUE;
@@ -2026,27 +2026,27 @@ event_callback (XEvent   *event,
           if (display->grab_op == META_GRAB_OP_COMPOSITOR)
             break;
 
-          if (device_event->detail == 4 || device_event->detail == 5)
-            /* Scrollwheel event, do nothing and deliver event to compositor below */
-            break;
+          // if (device_event->detail == 4 || device_event->detail == 5)
+          //    Scrollwheel event, do nothing and deliver event to compositor below 
+          //   break;
 
-          // if (display->mouse_zoom_modifiers > 0 && (device_event->detail == 4 || device_event->detail == 5))
-          //   {
-          //     if ((device_event->mods.effective & ~display->ignored_modifier_mask) == display->mouse_zoom_modifiers)
-          //       {
-          //         if (device_event->detail == 4)
-          //           {
-          //             g_signal_emit (display, display_signals[ZOOM_SCROLL_IN], 0);
-          //           }
+          if (display->mouse_zoom_modifiers > 0 && (device_event->detail == 4 || device_event->detail == 5))
+            {
+              if ((device_event->mods.effective & ~display->ignored_modifier_mask) == display->mouse_zoom_modifiers)
+                {
+                  if (device_event->detail == 4)
+                    {
+                      g_signal_emit (display, display_signals[ZOOM_SCROLL_IN], 0);
+                    }
 
-          //         if (device_event->detail == 5)
-          //           {
-          //             g_signal_emit (display, display_signals[ZOOM_SCROLL_OUT], 0);
-          //           }
-          //         filter_out_event = bypass_compositor = TRUE;
-          //       }
-          //     break;
-          //   }
+                  if (device_event->detail == 5)
+                    {
+                      g_signal_emit (display, display_signals[ZOOM_SCROLL_OUT], 0);
+                    }
+                  filter_out_event = bypass_compositor = TRUE;
+                }
+              break;
+            }
 
           if ((window &&
                meta_grab_op_is_mouse (display->grab_op) &&
