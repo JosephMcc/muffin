@@ -60,6 +60,7 @@
 
 #include <clutter/x11/clutter-x11.h>
 
+#include "core.h"
 #include <meta/screen.h>
 #include <meta/errors.h>
 #include <meta/window.h>
@@ -211,6 +212,8 @@ get_output_window (MetaScreen *screen)
 
   xroot = meta_screen_get_xroot (screen);
   output = XCompositeGetOverlayWindow (xdisplay, xroot);
+
+  meta_core_add_old_event_mask (xdisplay, output, &mask);
 
   XISetMask (mask.mask, XI_KeyPress);
   XISetMask (mask.mask, XI_KeyRelease);
@@ -653,6 +656,8 @@ meta_compositor_manage_screen (MetaCompositor *compositor,
     unsigned char mask_bits[XIMaskLen (XI_LASTEVENT)] = { 0 };
     XIEventMask mask = { XIAllMasterDevices, sizeof (mask_bits), mask_bits };
     XWindowAttributes attr;
+
+    meta_core_add_old_event_mask (xdisplay, xwin, &mask);
 
     XISetMask (mask.mask, XI_KeyPress);
     XISetMask (mask.mask, XI_KeyRelease);
