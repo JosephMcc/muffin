@@ -75,6 +75,7 @@ struct _MetaBarrierEvent {
   /* < public > */
   int event_id;
   int dt;
+  guint32 time;
   double x;
   double y;
   double dx;
