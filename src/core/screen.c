@@ -56,6 +56,7 @@
 #include <locale.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 static char* get_screen_name (MetaDisplay *display,
                               int          number);
@@ -1978,6 +1979,7 @@ meta_screen_get_mouse_window (MetaScreen  *screen,
                   &mods,
                   &group);
   meta_error_trap_pop (screen->display);
+  free (buttons.mask);
 
   if (screen->active_workspace->showing_desktop)
     {
@@ -2245,6 +2247,7 @@ meta_screen_get_current_monitor (MetaScreen *screen)
                       &buttons,
                       &mods,
                       &group);
+      free (buttons.mask);
 
       pointer_position.x = root_x_return;
       pointer_position.y = root_y_return;

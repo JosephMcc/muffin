@@ -54,6 +54,7 @@
 #include <X11/Xatom.h>
 #include <X11/Xlibint.h> /* For display->resource_mask */
 #include <string.h>
+#include <stdlib.h>
 #include <math.h>
 
 #ifdef HAVE_SHAPE
@@ -7277,6 +7278,8 @@ meta_window_client_message (MetaWindow *window,
                 button = 3;
               else
                 button = 0;
+
+              free (buttons.mask);
             }
 
           if (button != 0)
