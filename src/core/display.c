@@ -562,8 +562,8 @@ meta_display_open (void)
                           event_callback,
                           the_display);
   
-  the_display->window_ids = g_hash_table_new (meta_unsigned_long_hash,
-                                          meta_unsigned_long_equal);
+  the_display->xids = g_hash_table_new (meta_unsigned_long_hash,
+                                        meta_unsigned_long_equal);
   
   i = 0;
   while (i < N_IGNORED_CROSSING_SERIALS)
@@ -980,7 +980,7 @@ meta_display_list_windows (MetaDisplay          *display,
 
   winlist = NULL;
 
-  g_hash_table_iter_init (&iter, display->window_ids);
+  g_hash_table_iter_init (&iter, display->xids);
   while (g_hash_table_iter_next (&iter, &key, &value))
     {
       MetaWindow *window = value;
@@ -1090,7 +1090,7 @@ meta_display_close (MetaDisplay *display,
   /* Must be after all calls to meta_window_unmanage() since they
    * unregister windows
    */
-  g_hash_table_destroy (display->window_ids);
+  g_hash_table_destroy (display->xids);
 
   if (display->leader_window != None)
     XDestroyWindow (display->xdisplay, display->leader_window);
@@ -3571,7 +3571,7 @@ LOCAL_SYMBOL MetaWindow*
 meta_display_lookup_x_window (MetaDisplay *display,
                               Window       xwindow)
 {
-  return g_hash_table_lookup (display->window_ids, &xwindow);
+  return g_hash_table_lookup (display->xids, &xwindow);
 }
 
 LOCAL_SYMBOL void
@@ -3579,18 +3579,18 @@ meta_display_register_x_window (MetaDisplay *display,
                                 Window      *xwindowp,
                                 MetaWindow  *window)
 {
-  g_return_if_fail (g_hash_table_lookup (display->window_ids, xwindowp) == NULL);
+  g_return_if_fail (g_hash_table_lookup (display->xids, xwindowp) == NULL);
   
-  g_hash_table_insert (display->window_ids, xwindowp, window);
+  g_hash_table_insert (display->xids, xwindowp, window);
 }
 
 LOCAL_SYMBOL void
 meta_display_unregister_x_window (MetaDisplay *display,
                                   Window       xwindow)
 {
-  g_return_if_fail (g_hash_table_lookup (display->window_ids, &xwindow) != NULL);
+  g_return_if_fail (g_hash_table_lookup (display->xids, &xwindow) != NULL);
 
-  g_hash_table_remove (display->window_ids, &xwindow);
+  g_hash_table_remove (display->xids, &xwindow);
 
   /* Remove any pending pings */
   remove_pending_pings_for_window (display, xwindow);
@@ -3974,7 +3974,7 @@ MetaWindow*
 meta_display_lookup_sync_alarm (MetaDisplay *display,
                                 XSyncAlarm   alarm)
 {
-  return g_hash_table_lookup (display->window_ids, &alarm);
+  return g_hash_table_lookup (display->xids, &alarm);
 }
 
 void
@@ -3982,18 +3982,18 @@ meta_display_register_sync_alarm (MetaDisplay *display,
                                   XSyncAlarm  *alarmp,
                                   MetaWindow  *window)
 {
-  g_return_if_fail (g_hash_table_lookup (display->window_ids, alarmp) == NULL);
+  g_return_if_fail (g_hash_table_lookup (display->xids, alarmp) == NULL);
 
-  g_hash_table_insert (display->window_ids, alarmp, window);
+  g_hash_table_insert (display->xids, alarmp, window);
 }
 
 void
 meta_display_unregister_sync_alarm (MetaDisplay *display,
                                     XSyncAlarm   alarm)
 {
-  g_return_if_fail (g_hash_table_lookup (display->window_ids, &alarm) != NULL);
+  g_return_if_fail (g_hash_table_lookup (display->xids, &alarm) != NULL);
 
-  g_hash_table_remove (display->window_ids, &alarm);
+  g_hash_table_remove (display->xids, &alarm);
 }
 #endif /* HAVE_XSYNC */
 
