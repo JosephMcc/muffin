@@ -1,5 +1,11 @@
 /* -*- mode: C; c-file-style: "gnu"; indent-tabs-mode: nil; c-basic-offset: 2; -*- */
 
+/**
+ * SECTION:barrier
+ * @Title: MetaBarrier
+ * @Short_Description: Pointer barriers
+ */
+
 #include "config.h"
 
 #include <glib-object.h>
@@ -52,6 +58,8 @@ struct _MetaBarrierPrivate
 
   PointerBarrier xbarrier;
 };
+
+static void meta_barrier_event_unref (MetaBarrierEvent *event);
 
 static void
 meta_barrier_get_property (GObject    *object,
@@ -353,6 +361,8 @@ meta_barrier_fire_event (MetaBarrier    *barrier,
     default:
       g_assert_not_reached ();
     }
+
+  meta_barrier_event_unref (event);
 }
 
 gboolean
