@@ -44,6 +44,7 @@
 #include "xprops.h"
 #include <meta/compositor.h>
 #include "muffin-enum-types.h"
+#include "core.h"
 
 #include <X11/extensions/Xinerama.h>
 

@@ -49,6 +49,7 @@
 #include "constraints.h"
 #include "muffin-enum-types.h"
 #include <clutter/clutter.h>
+#include "core.h"
 
 #include <X11/Xatom.h>
 #include <X11/Xlibint.h> /* For display->resource_mask */
