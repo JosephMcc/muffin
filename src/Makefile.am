@@ -101,8 +101,6 @@ libmuffin_la_SOURCES =				\
 	core/edge-resistance.h			\
 	core/errors.c				\
 	meta/errors.h				\
-	core/eventqueue.c			\
-	core/eventqueue.h			\
 	core/frame.c				\
 	core/frame.h				\
 	ui/gradient.c				\
