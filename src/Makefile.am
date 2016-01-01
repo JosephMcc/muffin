@@ -36,6 +36,8 @@ muffin_built_sources = \
 libmuffin_la_SOURCES =				\
 	core/async-getprop.c			\
 	core/async-getprop.h			\
+	core/barrier.c				\
+	meta/barrier.h				\
 	core/bell.c				\
 	core/bell.h				\
 	core/boxes.c				\
@@ -168,6 +170,7 @@ libmuffin_la_LIBADD  = $(MUFFIN_LIBS) -lclutter-glx-1.0
 # Headers installed for plugins; introspected information will
 # be extracted into Muffin-<version>.gir
 libmuffininclude_base_headers =		\
+	meta/barrier.h				\
 	meta/boxes.h				\
 	meta/common.h				\
 	meta/compositor-muffin.h		\
