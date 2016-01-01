@@ -669,20 +669,14 @@ meta_frames_lookup_window (MetaFrames *frames,
   return frame;
 }
 
-LOCAL_SYMBOL void
-meta_frames_get_borders (MetaFrames *frames,
-                         Window xwindow,
-                         MetaFrameBorders *borders)
+static void
+meta_ui_frame_get_borders (MetaFrames *frames,
+                           MetaUIFrame *frame,
+                           MetaFrameBorders *borders)
 {
   MetaFrameFlags flags;
-  MetaUIFrame *frame;
   MetaFrameType type;
-  
-  frame = meta_frames_lookup_window (frames, xwindow);
 
-  if (frame == NULL)
-    meta_bug ("No such frame 0x%lx\n", xwindow);
-  
   meta_core_get (GDK_DISPLAY_XDISPLAY (gdk_display_get_default ()), frame->xwindow,
                  META_CORE_GET_FRAME_FLAGS, &flags,
                  META_CORE_GET_FRAME_TYPE, &type,
@@ -705,17 +699,29 @@ meta_frames_get_borders (MetaFrames *frames,
 }
 
 LOCAL_SYMBOL void
-meta_frames_get_corner_radiuses (MetaFrames *frames,
-                                 Window      xwindow,
-                                 float      *top_left,
-                                 float      *top_right,
-                                 float      *bottom_left,
-                                 float      *bottom_right)
+meta_frames_get_borders (MetaFrames *frames,
+                         Window xwindow,
+                         MetaFrameBorders *borders)
 {
   MetaUIFrame *frame;
-  MetaFrameGeometry fgeom;
 
   frame = meta_frames_lookup_window (frames, xwindow);
+
+  if (frame == NULL)
+    meta_bug ("No such frame 0x%lx\n", xwindow);
+
+  meta_ui_frame_get_borders (frames, frame, borders);
+}
+
+static void
+meta_ui_frame_get_corner_radiuses (MetaFrames  *frames,
+                                   MetaUIFrame *frame,
+                                   float       *top_left,
+                                   float       *top_right,
+                                   float       *bottom_left,
+                                   float       *bottom_right)
+{
+  MetaFrameGeometry fgeom;
 
   meta_frames_calc_geometry (frames, frame, &fgeom);
 
@@ -736,6 +742,22 @@ meta_frames_get_corner_radiuses (MetaFrames *frames,
     *bottom_left = fgeom.bottom_left_corner_rounded_radius + sqrt(fgeom.bottom_left_corner_rounded_radius);
   if (bottom_right)
     *bottom_right = fgeom.bottom_right_corner_rounded_radius + sqrt(fgeom.bottom_right_corner_rounded_radius);
+}
+
+void
+meta_frames_get_corner_radiuses (MetaFrames *frames,
+                                 Window      xwindow,
+                                 float      *top_left,
+                                 float      *top_right,
+                                 float      *bottom_left,
+                                 float      *bottom_right)
+{
+  MetaUIFrame *frame;
+
+  frame = meta_frames_lookup_window (frames, xwindow);
+
+  meta_ui_frame_get_corner_radiuses (frames, frame, top_left, top_right,
+                                     bottom_left, bottom_right);
 }
 
 LOCAL_SYMBOL void
