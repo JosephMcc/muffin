@@ -2052,7 +2052,10 @@ event_callback (XEvent   *event,
           break;
        case XI_ButtonPress:
           if (display->grab_op == META_GRAB_OP_COMPOSITOR)
+          {
+            g_printerr ("Meta grab op is compositor\n");
             break;
+          }
 
           // if (device_event->detail == 4 || device_event->detail == 5)
           //    Scrollwheel event, do nothing and deliver event to compositor below 
