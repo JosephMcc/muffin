@@ -668,6 +668,7 @@ meta_compositor_manage_screen (MetaCompositor *compositor,
 
   clutter_container_add (CLUTTER_CONTAINER (info->stage),
                          info->window_group,
+                         info->top_window_group,
                          info->overlay_group,
                          NULL);
 
