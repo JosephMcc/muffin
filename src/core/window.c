@@ -687,6 +687,8 @@ sync_client_window_mapped (MetaWindow *window)
 {
   gboolean should_be_mapped = client_window_should_be_mapped (window);
 
+  g_return_if_fail (!window->override_redirect);
+
   if (window->mapped == should_be_mapped)
     return;
 
@@ -1522,7 +1524,8 @@ meta_window_new_with_attrs (MetaDisplay       *display,
   /* disable show desktop mode unless we're a desktop component */
   maybe_leave_show_desktop_mode (window);
 
-  sync_client_window_mapped (window);
+  if (!window->override_redirect)
+    sync_client_window_mapped (window);
 
   meta_window_queue (window, META_QUEUE_CALC_SHOWING);
   /* See bug 303284; a transient of the given window can already exist, in which
@@ -2341,7 +2344,8 @@ implement_showing (MetaWindow *window,
   meta_verbose ("Implement showing = %d for window %s\n",
                 showing, window->desc);
 
-  sync_client_window_mapped (window);
+  if (!window->override_redirect)
+    sync_client_window_mapped (window);
 
   if (!showing)
     {
