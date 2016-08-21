@@ -265,8 +265,6 @@ meta_frames_init (MetaFrames *frames)
 
   update_style_contexts (frames);
 
-  gtk_widget_set_double_buffered (GTK_WIDGET (frames), FALSE);
-
   meta_prefs_add_listener (prefs_changed_callback, frames);
 }
 
@@ -1913,29 +1911,6 @@ meta_frames_destroy_event           (GtkWidget           *widget,
   return TRUE;
 }
 
-
-static void
-setup_bg_cr (cairo_t *cr, GdkWindow *window, int x_offset, int y_offset)
-{
-  GdkWindow *parent = gdk_window_get_parent (window);
-  cairo_pattern_t *bg_pattern;
-
-  bg_pattern = gdk_window_get_background_pattern (window);
-  if (bg_pattern == NULL && parent)
-    {
-      gint window_x, window_y;
-
-      gdk_window_get_position (window, &window_x, &window_y);
-      setup_bg_cr (cr, parent, x_offset + window_x, y_offset + window_y);
-    }
-  else if (bg_pattern)
-    {
-      cairo_translate (cr, - x_offset, - y_offset);
-      cairo_set_source (cr, bg_pattern);
-      cairo_translate (cr, x_offset, y_offset);
-    }
-}
-
 static void
 clip_region_to_visible_frame_border (cairo_region_t *region,
                                      MetaUIFrame    *frame)
@@ -1982,6 +1957,23 @@ clip_region_to_visible_frame_border (cairo_region_t *region,
   cairo_region_destroy (frame_border);
 }
 
+/* XXX -- this is disgusting. Find a better approach here.
+ * Use multiple widgets? */
+static MetaUIFrame *
+find_frame_to_draw (MetaFrames *frames,
+                    cairo_t    *cr)
+{
+  GHashTableIter iter;
+  MetaUIFrame *frame;
+
+  g_hash_table_iter_init (&iter, frames->frames);
+  while (g_hash_table_iter_next (&iter, (gpointer *) &frame, NULL))
+    if (gtk_cairo_should_draw_window (cr, frame->window))
+      return frame;
+
+  return NULL;
+}
+
 static gboolean
 meta_frames_draw (GtkWidget *widget,
                   cairo_t   *cr)
@@ -1990,14 +1982,11 @@ meta_frames_draw (GtkWidget *widget,
   MetaFrames *frames;
   cairo_rectangle_int_t clip;
   cairo_region_t *region;
-  cairo_surface_t *target;
 
   frames = META_FRAMES (widget);
-  target = cairo_get_target (cr);
   gdk_cairo_get_clip_rectangle (cr, &clip);
 
-  g_assert (cairo_surface_get_type (target) == CAIRO_SURFACE_TYPE_XLIB);
-  frame = meta_frames_lookup_window (frames, cairo_xlib_surface_get_drawable (target));
+  frame = find_frame_to_draw (frames, cr);
   if (frame == NULL)
     return FALSE;
 
@@ -2016,11 +2005,6 @@ meta_frames_draw (GtkWidget *widget,
 
   gdk_cairo_region (cr, region);
   cairo_clip (cr);
-
-  cairo_save (cr);
-  setup_bg_cr (cr, frame->window, 0, 0);
-  cairo_paint (cr);
-  cairo_restore (cr);
 
   meta_frames_paint (frames, frame, cr);
 
