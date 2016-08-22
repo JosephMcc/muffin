@@ -407,8 +407,7 @@ meta_frames_ensure_layout (MetaFrames  *frames,
                  META_CORE_GET_FRAME_TYPE, &type,
                  META_CORE_GET_END);
 
-  style = meta_theme_get_frame_style (meta_theme_get_current (),
-                                      type, flags);
+  style = meta_theme_get_frame_style (meta_theme_get_default (), type, flags);
 
   if (style != frame->cache_style)
     {
@@ -492,7 +491,7 @@ meta_frames_calc_geometry (MetaFrames        *frames,
 
   meta_prefs_get_button_layout (&button_layout);
   
-  meta_theme_calc_geometry (meta_theme_get_current (),
+  meta_theme_calc_geometry (meta_theme_get_default (),
                             frame->style_info,
                             type,
                             frame->text_height,
@@ -661,7 +660,7 @@ meta_ui_frame_get_borders (MetaFrames *frames,
    * by the core move/resize code to decide on the client
    * window size
    */
-  meta_theme_get_frame_borders (meta_theme_get_current (),
+  meta_theme_get_frame_borders (meta_theme_get_default (),
                                 frame->style_info,
                                 type,
                                 frame->text_height,
@@ -682,37 +681,6 @@ meta_frames_get_borders (MetaFrames *frames,
     meta_bug ("No such frame 0x%lx\n", xwindow);
 
   meta_ui_frame_get_borders (frames, frame, borders);
-}
-
-static void
-meta_ui_frame_get_corner_radiuses (MetaFrames  *frames,
-                                   MetaUIFrame *frame,
-                                   float       *top_left,
-                                   float       *top_right,
-                                   float       *bottom_left,
-                                   float       *bottom_right)
-{
-  MetaFrameGeometry fgeom;
-
-  meta_frames_calc_geometry (frames, frame, &fgeom);
-
-  /* For compatibility with the code in get_visible_rect(), there's
-   * a mysterious sqrt() added to the corner radiuses:
-   *
-   *   const float radius = sqrt(corner) + corner;
-   *
-   * It's unclear why the radius is calculated like this, but we
-   * need to be consistent with it.
-   */
-
-  if (top_left)
-    *top_left = fgeom.top_left_corner_rounded_radius + sqrt(fgeom.top_left_corner_rounded_radius);
-  if (top_right)
-    *top_right = fgeom.top_right_corner_rounded_radius + sqrt(fgeom.top_right_corner_rounded_radius);
-  if (bottom_left)
-    *bottom_left = fgeom.bottom_left_corner_rounded_radius + sqrt(fgeom.bottom_left_corner_rounded_radius);
-  if (bottom_right)
-    *bottom_right = fgeom.bottom_right_corner_rounded_radius + sqrt(fgeom.bottom_right_corner_rounded_radius);
 }
 
 /* The client rectangle surrounds client window; it subtracts both
@@ -764,10 +732,10 @@ get_visible_region (MetaFrames        *frames,
   if (fgeom->top_left_corner_rounded_radius != 0)
     {
       const int corner = fgeom->top_left_corner_rounded_radius;
-      const float radius = sqrt(corner) + corner;
+      const float radius = corner;
       int i;
 
-      for (i=0; i<corner; i++)
+      for (i = 0; i < corner; i++)
         {
           const int width = floor(0.5 + radius - sqrt(radius*radius - (radius-(i+0.5))*(radius-(i+0.5))));
           rect.x = frame_rect.x;
@@ -782,7 +750,7 @@ get_visible_region (MetaFrames        *frames,
   if (fgeom->top_right_corner_rounded_radius != 0)
     {
       const int corner = fgeom->top_right_corner_rounded_radius;
-      const float radius = sqrt(corner) + corner;
+      const float radius = corner;
       int i;
 
       for (i=0; i<corner; i++)
@@ -800,7 +768,7 @@ get_visible_region (MetaFrames        *frames,
   if (fgeom->bottom_left_corner_rounded_radius != 0)
     {
       const int corner = fgeom->bottom_left_corner_rounded_radius;
-      const float radius = sqrt(corner) + corner;
+      const float radius = corner;
       int i;
 
       for (i=0; i<corner; i++)
@@ -818,7 +786,7 @@ get_visible_region (MetaFrames        *frames,
   if (fgeom->bottom_right_corner_rounded_radius != 0)
     {
       const int corner = fgeom->bottom_right_corner_rounded_radius;
-      const float radius = sqrt(corner) + corner;
+      const float radius = corner;
       int i;
 
       for (i=0; i<corner; i++)
@@ -1832,36 +1800,34 @@ meta_frames_destroy_event           (GtkWidget           *widget,
   return TRUE;
 }
 
-static void
-clip_region_to_visible_frame_border (cairo_region_t *region,
-                                     MetaUIFrame    *frame)
+static cairo_region_t *
+get_visible_frame_border_region (MetaUIFrame *frame)
 {
+  MetaRectangle frame_rect;
   cairo_rectangle_int_t area;
   cairo_region_t *frame_border;
   MetaFrameFlags flags;
   MetaFrameType type;
   MetaFrameBorders borders;
   Display *display;
-  int frame_width, frame_height;
   
   display = GDK_DISPLAY_XDISPLAY (gdk_display_get_default ());
 
   meta_core_get (display, frame->xwindow,
                  META_CORE_GET_FRAME_FLAGS, &flags,
                  META_CORE_GET_FRAME_TYPE, &type,
-                 META_CORE_GET_FRAME_WIDTH, &frame_width,
-                 META_CORE_GET_FRAME_HEIGHT, &frame_height,
+                 META_CORE_GET_FRAME_RECT, &frame_rect,
                  META_CORE_GET_END);
 
-  meta_theme_get_frame_borders (meta_theme_get_current (), frame->style_info,
+  meta_theme_get_frame_borders (meta_theme_get_default (), frame->style_info,
                                 type, frame->text_height, flags, 
                                 &borders);
 
   /* Visible frame rect */
   area.x = borders.invisible.left;
   area.y = borders.invisible.top;
-  area.width = frame_width - borders.invisible.left - borders.invisible.right;
-  area.height = frame_height - borders.invisible.top - borders.invisible.bottom;
+  area.width = frame_rect.width;
+  area.height = frame_rect.height;
 
   frame_border = cairo_region_create_rectangle (&area);
 
@@ -1873,29 +1839,8 @@ clip_region_to_visible_frame_border (cairo_region_t *region,
 
   /* Visible frame border */
   cairo_region_subtract_rectangle (frame_border, &area);
-  cairo_region_intersect (region, frame_border);
-
-  cairo_region_destroy (frame_border);
+  return frame_border;
 }
-
-/* XXX -- this is disgusting. Find a better approach here.
- * Use multiple widgets? */
-static MetaUIFrame *
-find_frame_to_draw (MetaFrames *frames,
-                    cairo_t    *cr)
-{
-  GHashTableIter iter;
-  MetaUIFrame *frame;
-
-  g_hash_table_iter_init (&iter, frames->frames);
-  while (g_hash_table_iter_next (&iter, (gpointer *) &frame, NULL))
-    if (gtk_cairo_should_draw_window (cr, frame->window))
-      return frame;
-
-  return NULL;
-}
-
-#define TAU (2*M_PI)
 
 /*
  * Draw the opaque and semi-opaque pixels of this frame into a mask.
@@ -1927,69 +1872,43 @@ meta_frames_get_mask (MetaFrames          *frames,
                       cairo_t             *cr)
 {
   MetaUIFrame *frame = meta_frames_lookup_window (frames, xwindow);
-  float top_left, top_right, bottom_left, bottom_right;
-  int x, y;
   MetaFrameBorders borders;
+  MetaFrameFlags flags;
 
   if (frame == NULL)
     meta_bug ("No such frame 0x%lx\n", xwindow);
 
-  cairo_save (cr);
+  meta_core_get (GDK_DISPLAY_XDISPLAY (gdk_display_get_default ()),
+                 xwindow,
+                 META_CORE_GET_FRAME_FLAGS, &flags,
+                 META_CORE_GET_END);
 
+  meta_style_info_set_flags (frame->style_info, flags);
   meta_ui_frame_get_borders (frames, frame, &borders);
-  meta_ui_frame_get_corner_radiuses (frames, frame,
-                                     &top_left, &top_right,
-                                     &bottom_left, &bottom_right);
-
-  /* top left */
-  x = borders.invisible.left;
-  y = borders.invisible.top;
-
-  cairo_arc (cr,
-             x + top_left,
-             y + top_left,
-             top_left,
-             2 * TAU / 4,
-             3 * TAU / 4);
-
-  /* top right */
-  x = width - borders.invisible.right - top_right;
-  y = borders.invisible.top;
-
-  cairo_arc (cr,
-             x,
-             y + top_right,
-             top_right,
-             3 * TAU / 4,
-             4 * TAU / 4);
-
-  /* bottom right */
-  x = width - borders.invisible.right - bottom_right;
-  y = height - borders.invisible.bottom - bottom_right;
-
-  cairo_arc (cr,
-             x,
-             y,
-             bottom_right,
-             0 * TAU / 4,
-             1 * TAU / 4);
-
-  /* bottom left */
-  x = borders.invisible.left;
-  y = height - borders.invisible.bottom - bottom_left;
-
-  cairo_arc (cr,
-             x + bottom_left,
-             y,
-             bottom_left,
-             1 * TAU / 4,
-             2 * TAU / 4);
-
-  cairo_set_source_rgba (cr, 1, 1, 1, 1);
-  cairo_fill (cr);
-
-  cairo_restore (cr);
+  gtk_render_background (frame->style_info->styles[META_STYLE_ELEMENT_FRAME], cr,
+                         borders.invisible.left, borders.invisible.top,
+                         width - borders.invisible.left - borders.invisible.right,
+                         height - borders.invisible.top - borders.invisible.bottom);
 }
+
+
+/* XXX -- this is disgusting. Find a better approach here.
+ * Use multiple widgets? */
+static MetaUIFrame *
+find_frame_to_draw (MetaFrames *frames,
+                    cairo_t    *cr)
+{
+  GHashTableIter iter;
+  MetaUIFrame *frame;
+
+  g_hash_table_iter_init (&iter, frames->frames);
+  while (g_hash_table_iter_next (&iter, (gpointer *) &frame, NULL))
+    if (gtk_cairo_should_draw_window (cr, frame->window))
+      return frame;
+
+  return NULL;
+}
+
 
 static gboolean
 meta_frames_draw (GtkWidget *widget,
@@ -1997,11 +1916,9 @@ meta_frames_draw (GtkWidget *widget,
 {
   MetaUIFrame *frame;
   MetaFrames *frames;
-  cairo_rectangle_int_t clip;
   cairo_region_t *region;
 
   frames = META_FRAMES (widget);
-  gdk_cairo_get_clip_rectangle (cr, &clip);
 
   frame = find_frame_to_draw (frames, cr);
   if (frame == NULL)
@@ -2014,18 +1931,12 @@ meta_frames_draw (GtkWidget *widget,
       return TRUE;
     }
 
-  region = cairo_region_create_rectangle (&clip);
-  clip_region_to_visible_frame_border (region, frame);
-
-  if (cairo_region_is_empty (region))
-    goto out;
-
+  region = get_visible_frame_border_region (frame);
   gdk_cairo_region (cr, region);
   cairo_clip (cr);
 
   meta_frames_paint (frames, frame, cr);
 
- out:
   cairo_region_destroy (region);
   
   return TRUE;
@@ -2142,7 +2053,7 @@ meta_frames_paint (MetaFrames   *frames,
 
   meta_prefs_get_button_layout (&button_layout);
 
-  meta_theme_draw_frame (meta_theme_get_current (),
+  meta_theme_draw_frame (meta_theme_get_default (),
                          frame->style_info,
                          cr,
                          type,

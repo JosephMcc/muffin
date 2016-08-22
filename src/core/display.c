@@ -2618,14 +2618,6 @@ event_callback (XEvent   *event,
                     }
                 }
               else if (event->xclient.message_type ==
-                       display->atom__MUFFIN_RELOAD_THEME_MESSAGE)
-                {
-                  meta_verbose ("Received reload theme request\n");
-                  meta_ui_set_current_theme (meta_prefs_get_theme (),
-                                             TRUE);
-                  meta_display_retheme_all ();
-                }
-              else if (event->xclient.message_type ==
                        display->atom__MUFFIN_SET_KEYBINDINGS_MESSAGE)
                 {
                   meta_verbose ("Received set keybindings request = %d\n",

@@ -187,20 +187,6 @@ color_composite (const GdkRGBA *bg,
   color->blue = color->blue + (fg->blue - color->blue) * alpha;
 }
 
-/*
- * Sets all the fields of a border to dummy values.
- *
- * \param border The border whose fields should be reset.
- */
-static void
-init_border (GtkBorder *border)
-{
-  border->top = -1;
-  border->bottom = -1;
-  border->left = -1;
-  border->right = -1;
-}
-
 /**
  * meta_frame_layout_new: (skip)
  *
@@ -218,23 +204,6 @@ meta_frame_layout_new  (void)
 
   layout->refcount = 1;
 
-  /* Fill with -1 values to detect invalid themes */
-  layout->left_width = -1;
-  layout->right_width = -1;
-  layout->bottom_height = -1;
-
-  init_border (&layout->title_border);
-
-  layout->title_vertical_pad = -1;
-  
-  layout->right_titlebar_edge = -1;
-  layout->left_titlebar_edge = -1;
-
-  layout->button_sizing = META_BUTTON_SIZING_LAST;
-  layout->button_aspect = 1.0;
-  layout->button_width = -1;
-  layout->button_height = -1;
-
   /* Spacing as hardcoded in GTK+:
    * https://git.gnome.org/browse/gtk+/tree/gtk/gtkheaderbar.c?h=gtk-3-14#n53
    */
@@ -242,8 +211,6 @@ meta_frame_layout_new  (void)
   layout->has_title = TRUE;
   layout->title_scale = 1.0;
   layout->icon_size = META_MINI_ICON_WIDTH;
-  
-  init_border (&layout->button_border);
 
   return layout;
 }
@@ -503,48 +470,6 @@ rect_for_function (MetaFrameGeometry *fgeom,
                    MetaButtonFunction function,
                    MetaTheme         *theme)
 {
-
-  /* Firstly, check version-specific things. */
-  
-  if (META_THEME_ALLOWS(theme, META_THEME_SHADE_STICK_ABOVE_BUTTONS))
-    {
-      switch (function)
-        {
-        case META_BUTTON_FUNCTION_SHADE:
-          if ((flags & META_FRAME_ALLOWS_SHADE) && !(flags & META_FRAME_SHADED))
-            return &fgeom->shade_rect;
-          else
-            return NULL;
-        case META_BUTTON_FUNCTION_ABOVE:
-          if (!(flags & META_FRAME_ABOVE))
-            return &fgeom->above_rect;
-          else
-            return NULL;
-        case META_BUTTON_FUNCTION_STICK:
-          if (!(flags & META_FRAME_STUCK))
-            return &fgeom->stick_rect;
-          else
-            return NULL;
-        case META_BUTTON_FUNCTION_UNSHADE:
-          if ((flags & META_FRAME_ALLOWS_SHADE) && (flags & META_FRAME_SHADED))
-            return &fgeom->unshade_rect;
-          else
-            return NULL;
-        case META_BUTTON_FUNCTION_UNABOVE:
-          if (flags & META_FRAME_ABOVE)
-            return &fgeom->unabove_rect;
-          else
-            return NULL;
-        case META_BUTTON_FUNCTION_UNSTICK:
-          if (flags & META_FRAME_STUCK)
-            return &fgeom->unstick_rect;
-        default:
-          /* just go on to the next switch block */;
-        }
-    }
-
-  /* now consider the buttons which exist in all versions */
-
   switch (function)
     {
     case META_BUTTON_FUNCTION_MENU:
@@ -573,10 +498,9 @@ rect_for_function (MetaFrameGeometry *fgeom,
     case META_BUTTON_FUNCTION_UNSTICK:
     case META_BUTTON_FUNCTION_UNSHADE:
     case META_BUTTON_FUNCTION_UNABOVE:
-      /* we are being asked for a >v1 button which hasn't been handled yet,
-       * so obviously we're not in a theme which supports that version.
-       * therefore, we don't show the button. return NULL and all will
-       * be well.
+      /* Fringe buttons that used to be supported by theme versions >v1;
+       * if we want to support them again, we need to return the
+       * correspondings rects here
        */
       return NULL;
       
@@ -640,6 +564,16 @@ get_padding_and_border (GtkStyleContext *style,
 }
 
 static void
+scale_border (GtkBorder *border,
+              double     factor)
+{
+  border->left *= factor;
+  border->right *= factor;
+  border->top *= factor;
+  border->bottom *= factor;
+}
+
+static void
 meta_frame_layout_sync_with_style (MetaFrameLayout *layout,
                                    MetaStyleInfo   *style_info,
                                    MetaFrameFlags   flags)
@@ -654,6 +588,7 @@ meta_frame_layout_sync_with_style (MetaFrameLayout *layout,
 
   style = style_info->styles[META_STYLE_ELEMENT_FRAME];
   get_padding_and_border (style, &border);
+  scale_border (&border, layout->title_scale);
 
   layout->left_width = border.left;
   layout->right_width = border.right;
@@ -682,6 +617,7 @@ meta_frame_layout_sync_with_style (MetaFrameLayout *layout,
   layout->bottom_right_corner_rounded_radius = MAX (border_radius, max_radius);
 
   get_padding_and_border (style, &border);
+  scale_border (&border, layout->title_scale);
   layout->left_titlebar_edge = border.left;
   layout->right_titlebar_edge = border.right;
   layout->title_vertical_pad = border.top;
@@ -696,11 +632,13 @@ meta_frame_layout_sync_with_style (MetaFrameLayout *layout,
 
   style = style_info->styles[META_STYLE_ELEMENT_BUTTON];
   get_padding_and_border (style, &border);
+  scale_border (&border, layout->title_scale);
   layout->button_width += border.left + border.right;
   layout->button_height += border.top + border.bottom;
 
   style = style_info->styles[META_STYLE_ELEMENT_IMAGE];
   get_padding_and_border (style, &border);
+  scale_border (&border, layout->title_scale);
   layout->button_width += border.left + border.right;
   layout->button_height += border.top + border.bottom;
 }
@@ -5130,47 +5068,82 @@ meta_frame_style_set_validate  (MetaFrameStyleSet *style_set,
 }
 
 /**
- * meta_theme_get_current: (skip)
+ * meta_theme_get_default: (skip)
  *
  */
 MetaTheme*
-meta_theme_get_current (void)
+meta_theme_get_default (void)
 {
-  return meta_current_theme;
-}
+  static MetaTheme *theme = NULL;
+  int i, j, frame_type;
 
-void
-meta_theme_set_current (const char *name,
-                        gboolean    force_reload)
-{
-  MetaTheme *new_theme;
-  GError *err;
+  if (theme)
+    return theme;
 
-  meta_topic (META_DEBUG_THEMES, "Setting current theme to \"%s\"\n", name);
+  theme = meta_theme_new ();
   
-  if (!force_reload &&
-      meta_current_theme &&
-      strcmp (name, meta_current_theme->name) == 0)
-    return;
-  
-  err = NULL;
-  new_theme = meta_theme_load (name, &err);
-
-  if (new_theme == NULL)
+  for (frame_type = 0; frame_type < META_FRAME_TYPE_LAST; frame_type++)
     {
-      meta_warning (_("Failed to load theme \"%s\": %s\n"),
-                    name, err->message);
-      g_error_free (err);
-    }
-  else
-    {
-      if (meta_current_theme)
-        meta_theme_free (meta_current_theme);
+      MetaFrameStyleSet *style_set = meta_frame_style_set_new (NULL);
+      MetaFrameStyle *style = meta_frame_style_new (NULL);
 
-      meta_current_theme = new_theme;
+      style->layout = meta_frame_layout_new ();
 
-      meta_topic (META_DEBUG_THEMES, "New theme is \"%s\"\n", meta_current_theme->name);
+      switch (frame_type)
+        {
+        case META_FRAME_TYPE_NORMAL:
+          break;
+        case META_FRAME_TYPE_DIALOG:
+        case META_FRAME_TYPE_MODAL_DIALOG:
+        case META_FRAME_TYPE_ATTACHED:
+          style->layout->hide_buttons = TRUE;
+          break;
+        case META_FRAME_TYPE_MENU:
+        case META_FRAME_TYPE_UTILITY:
+          style->layout->title_scale = PANGO_SCALE_SMALL;
+          break;
+        case META_FRAME_TYPE_BORDER:
+          style->layout->has_title = FALSE;
+          style->layout->hide_buttons = TRUE;
+          break;
+        default:
+          g_assert_not_reached ();
+        }
+
+      for (i = 0; i < META_FRAME_FOCUS_LAST; i++)
+        {
+          for (j = 0; j < META_FRAME_RESIZE_LAST; j++)
+            {
+              meta_frame_style_ref (style);
+              style_set->normal_styles[j][i] = style;
+
+              meta_frame_style_ref (style);
+              style_set->shaded_styles[j][i] = style;
+            }
+
+          meta_frame_style_ref (style);
+          style_set->maximized_styles[i] = style;
+
+          meta_frame_style_ref (style);
+          style_set->tiled_left_styles[i] = style;
+
+          meta_frame_style_ref (style);
+          style_set->tiled_right_styles[i] = style;
+
+          meta_frame_style_ref (style);
+          style_set->maximized_and_shaded_styles[i] = style;
+
+          meta_frame_style_ref (style);
+          style_set->tiled_left_and_shaded_styles[i] = style;
+
+          meta_frame_style_ref (style);
+          style_set->tiled_right_and_shaded_styles[i] = style;
+        }
+
+      meta_frame_style_unref (style);
+      theme->style_sets_by_type[frame_type] = style_set;
     }
+  return theme;
 }
 
 /**
