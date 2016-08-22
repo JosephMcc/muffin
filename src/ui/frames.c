@@ -384,6 +384,8 @@ meta_frames_style_updated  (GtkWidget *widget)
   g_hash_table_foreach (frames->frames,
                         reattach_style_func, frames);
 
+  meta_retheme_all ();
+
   GTK_WIDGET_CLASS (meta_frames_parent_class)->style_updated (widget);
 }
 
@@ -491,6 +493,7 @@ meta_frames_calc_geometry (MetaFrames        *frames,
   meta_prefs_get_button_layout (&button_layout);
   
   meta_theme_calc_geometry (meta_theme_get_current (),
+                            frame->style_info,
                             type,
                             frame->text_height,
                             flags,
@@ -636,20 +639,14 @@ meta_frames_lookup_window (MetaFrames *frames,
   return frame;
 }
 
-LOCAL_SYMBOL void
-meta_frames_get_borders (MetaFrames *frames,
-                         Window xwindow,
-                         MetaFrameBorders *borders)
+static void
+meta_ui_frame_get_borders (MetaFrames *frames,
+                           MetaUIFrame *frame,
+                           MetaFrameBorders *borders)
 {
   MetaFrameFlags flags;
-  MetaUIFrame *frame;
   MetaFrameType type;
-  
-  frame = meta_frames_lookup_window (frames, xwindow);
 
-  if (frame == NULL)
-    meta_bug ("No such frame 0x%lx\n", xwindow);
-  
   meta_core_get (GDK_DISPLAY_XDISPLAY (gdk_display_get_default ()), frame->xwindow,
                  META_CORE_GET_FRAME_FLAGS, &flags,
                  META_CORE_GET_FRAME_TYPE, &type,
@@ -665,24 +662,37 @@ meta_frames_get_borders (MetaFrames *frames,
    * window size
    */
   meta_theme_get_frame_borders (meta_theme_get_current (),
+                                frame->style_info,
                                 type,
                                 frame->text_height,
                                 flags,
                                 borders);
 }
 
-LOCAL_SYMBOL void
-meta_frames_get_corner_radiuses (MetaFrames *frames,
-                                 Window      xwindow,
-                                 float      *top_left,
-                                 float      *top_right,
-                                 float      *bottom_left,
-                                 float      *bottom_right)
+void
+meta_frames_get_borders (MetaFrames *frames,
+                         Window xwindow,
+                         MetaFrameBorders *borders)
 {
   MetaUIFrame *frame;
-  MetaFrameGeometry fgeom;
 
   frame = meta_frames_lookup_window (frames, xwindow);
+
+  if (frame == NULL)
+    meta_bug ("No such frame 0x%lx\n", xwindow);
+
+  meta_ui_frame_get_borders (frames, frame, borders);
+}
+
+static void
+meta_ui_frame_get_corner_radiuses (MetaFrames  *frames,
+                                   MetaUIFrame *frame,
+                                   float       *top_left,
+                                   float       *top_right,
+                                   float       *bottom_left,
+                                   float       *bottom_right)
+{
+  MetaFrameGeometry fgeom;
 
   meta_frames_calc_geometry (frames, frame, &fgeom);
 
@@ -703,6 +713,22 @@ meta_frames_get_corner_radiuses (MetaFrames *frames,
     *bottom_left = fgeom.bottom_left_corner_rounded_radius + sqrt(fgeom.bottom_left_corner_rounded_radius);
   if (bottom_right)
     *bottom_right = fgeom.bottom_right_corner_rounded_radius + sqrt(fgeom.bottom_right_corner_rounded_radius);
+}
+
+void
+meta_frames_get_corner_radiuses (MetaFrames *frames,
+                                 Window      xwindow,
+                                 float      *top_left,
+                                 float      *top_right,
+                                 float      *bottom_left,
+                                 float      *bottom_right)
+{
+  MetaUIFrame *frame;
+
+  frame = meta_frames_lookup_window (frames, xwindow);
+
+  meta_ui_frame_get_corner_radiuses (frames, frame, top_left, top_right,
+                                     bottom_left, bottom_right);
 }
 
 /* The client rectangle surrounds client window; it subtracts both
@@ -1843,7 +1869,7 @@ clip_region_to_visible_frame_border (cairo_region_t *region,
                  META_CORE_GET_FRAME_HEIGHT, &frame_height,
                  META_CORE_GET_END);
 
-  meta_theme_get_frame_borders (meta_theme_get_current (),
+  meta_theme_get_frame_borders (meta_theme_get_current (), frame->style_info,
                                 type, frame->text_height, flags, 
                                 &borders);
 
@@ -1933,7 +1959,6 @@ meta_frames_paint (MetaFrames   *frames,
   MetaFrameFlags flags;
   MetaFrameType type;
   GdkPixbuf *mini_icon;
-  GdkPixbuf *icon;
   int w, h;
   MetaButtonState button_states[META_BUTTON_TYPE_LAST];
   Window grab_frame;
@@ -2029,7 +2054,6 @@ meta_frames_paint (MetaFrames   *frames,
                  META_CORE_GET_FRAME_FLAGS, &flags,
                  META_CORE_GET_FRAME_TYPE, &type,
                  META_CORE_GET_MINI_ICON, &mini_icon,
-                 META_CORE_GET_ICON, &icon,
                  META_CORE_GET_CLIENT_WIDTH, &w,
                  META_CORE_GET_CLIENT_HEIGHT, &h,
                  META_CORE_GET_END);
@@ -2048,7 +2072,7 @@ meta_frames_paint (MetaFrames   *frames,
                          frame->text_height,
                          &button_layout,
                          button_states,
-                         mini_icon, icon);
+                         mini_icon);
 }
 
 static gboolean
