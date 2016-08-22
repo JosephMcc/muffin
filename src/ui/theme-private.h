@@ -35,17 +35,6 @@
  *
  */
 typedef struct _MetaStyleInfo MetaStyleInfo;
-
-/**
- * MetaFrameStyle: (skip)
- *
- */
-typedef struct _MetaFrameStyle MetaFrameStyle;
-/**
- * MetaFrameStyleSet: (skip)
- *
- */
-typedef struct _MetaFrameStyleSet MetaFrameStyleSet;
 /**
  * MetaFrameLayout: (skip)
  *
@@ -64,42 +53,16 @@ typedef struct _MetaFrameGeometry MetaFrameGeometry;
 
 /**
  * Various parameters used to calculate the geometry of a frame.
- * They are used inside a MetaFrameStyle.
- * This corresponds closely to the <frame_geometry> tag in a theme file.
- *
  **/
 struct _MetaFrameLayout
 {
-  /** Reference count. */
   int refcount;
   
-  /** Size of left side */
-  int left_width;
-  /** Size of right side */
-  int right_width;
-  /** Size of bottom side */
-  int bottom_height;
-  
-  /** Border of blue title region
-   * \bug (blue?!)
-   **/
-  GtkBorder title_border;
-
-  /** Extra height for inside of title region, above the font height */
-  int title_vertical_pad;
-  
-  /** Right indent of buttons from edges of frame */
-  int right_titlebar_edge;
-  /** Left indent of buttons from edges of frame */
-  int left_titlebar_edge;
-
-  /** Width of a button; set even when we are using aspect sizing */
-  int button_width;
-
-  /** Height of a button; set even when we are using aspect sizing */
-  int button_height;
-
-  /** Space around buttons */
+  /** Border/padding of the entire frame */
+  GtkBorder frame_border;
+  /** Border/padding of the titlebar region */
+  GtkBorder titlebar_border;
+  /** Border/padding of titlebar buttons */
   GtkBorder button_border;
 
   /** Size of images in buttons */
@@ -153,10 +116,7 @@ struct _MetaFrameGeometry
 
   GdkRectangle title_rect;
 
-  int left_titlebar_edge;
-  int right_titlebar_edge;
-  int top_titlebar_edge;
-  int bottom_titlebar_edge;
+  GtkBorder content_border;
 
   /* used for a memset hack */
 #define ADDRESS_OF_BUTTON_RECTS(fgeom) (((char*)(fgeom)) + G_STRUCT_OFFSET (MetaFrameGeometry, close_rect))
@@ -237,39 +197,16 @@ struct _MetaStyleInfo
   GtkStyleContext *styles[META_STYLE_ELEMENT_LAST];
 };
 
-/**
- * How to draw a frame in a particular state (say, a focussed, non-maximised,
- * resizable frame). This corresponds closely to the <frame_style> tag
- * in a theme file.
- */
-struct _MetaFrameStyle
-{
-  /** Reference count. */
-  int refcount;
-  /**
-   * Parent style.
-   * Settings which are unspecified here will be taken from there.
-   */
-  MetaFrameStyle *parent;
-  /**
-   * Details such as the height and width of each edge, the corner rounding,
-   * and the aspect ratio of the buttons.
-   */
-  MetaFrameLayout *layout;
-};
-
 /* Kinds of frame...
  * 
- *  normal ->   noresize / vert only / horz only / both
- *              focused / unfocused
+ *  normal ->   focused / unfocused
  *  max    ->   focused / unfocused
  *  shaded ->   focused / unfocused
  *  max/shaded -> focused / unfocused
  *
- *  so 4 states with 8 sub-states in one, 2 sub-states in the other 3,
- *  meaning 14 total
+ *  so 4 states with 2 sub-states each, meaning 8 total
  *
- * 14 window states times 7 or 8 window types. Except some
+ * 8 window states times 7 or 8 window types. Except some
  * window types never get a frame so that narrows it down a bit.
  * 
  */
@@ -288,52 +225,10 @@ typedef enum
 
 typedef enum
 {
-  META_FRAME_RESIZE_NONE,
-  META_FRAME_RESIZE_VERTICAL,
-  META_FRAME_RESIZE_HORIZONTAL,
-  META_FRAME_RESIZE_BOTH,
-  META_FRAME_RESIZE_LAST
-} MetaFrameResize;
-
-typedef enum
-{
   META_FRAME_FOCUS_NO,
   META_FRAME_FOCUS_YES,
   META_FRAME_FOCUS_LAST
 } MetaFrameFocus;
-
-/**
- * How to draw frames at different times: when it's maximised or not, shaded
- * or not, when it's focussed or not, and (for non-maximised windows), when
- * it can be horizontally or vertically resized, both, or neither.
- * Not all window types actually get a frame.
- *
- * A theme contains one of these objects for each type of window (each
- * MetaFrameType), that is, normal, dialogue (modal and non-modal), etc.
- *
- * This corresponds closely to the <frame_style_set> tag in a theme file.
- */
-struct _MetaFrameStyleSet
-{
-  int refcount;
-  MetaFrameStyleSet *parent;
-  MetaFrameStyle *normal_styles[META_FRAME_RESIZE_LAST][META_FRAME_FOCUS_LAST];
-  MetaFrameStyle *maximized_styles[META_FRAME_FOCUS_LAST];
-  MetaFrameStyle *tiled_left_styles[META_FRAME_FOCUS_LAST];
-  MetaFrameStyle *tiled_right_styles[META_FRAME_FOCUS_LAST];
-  MetaFrameStyle *tiled_ulc_styles[META_FRAME_FOCUS_LAST];
-  MetaFrameStyle *tiled_llc_styles[META_FRAME_FOCUS_LAST];
-  MetaFrameStyle *tiled_urc_styles[META_FRAME_FOCUS_LAST];
-  MetaFrameStyle *tiled_lrc_styles[META_FRAME_FOCUS_LAST];
-  MetaFrameStyle *shaded_styles[META_FRAME_RESIZE_LAST][META_FRAME_FOCUS_LAST];
-  MetaFrameStyle *maximized_and_shaded_styles[META_FRAME_FOCUS_LAST];
-  MetaFrameStyle *tiled_left_and_shaded_styles[META_FRAME_FOCUS_LAST];
-  MetaFrameStyle *tiled_right_and_shaded_styles[META_FRAME_FOCUS_LAST];
-  MetaFrameStyle *tiled_ulc_and_shaded_styles[META_FRAME_FOCUS_LAST];
-  MetaFrameStyle *tiled_llc_and_shaded_styles[META_FRAME_FOCUS_LAST];
-  MetaFrameStyle *tiled_urc_and_shaded_styles[META_FRAME_FOCUS_LAST];
-  MetaFrameStyle *tiled_lrc_and_shaded_styles[META_FRAME_FOCUS_LAST];
-};
 
 /**
  * A theme. This is a singleton class which groups all settings from a theme
@@ -341,7 +236,7 @@ struct _MetaFrameStyleSet
  */
 struct _MetaTheme
 {
-  MetaFrameStyleSet *style_sets_by_type[META_FRAME_TYPE_LAST];
+  MetaFrameLayout *layouts[META_FRAME_TYPE_LAST];
 };
 
 MetaFrameLayout* meta_frame_layout_new           (void);
@@ -353,21 +248,12 @@ void             meta_frame_layout_get_borders   (const MetaFrameLayout *layout,
                                                   MetaFrameFlags         flags,
                                                   MetaFrameType          type,
                                                   MetaFrameBorders      *borders);
+void               meta_frame_layout_apply_scale (const MetaFrameLayout *layout,
+                                                  PangoFontDescription  *font_desc);
 
-MetaFrameStyle* meta_frame_style_new   (MetaFrameStyle *parent);
-void            meta_frame_style_ref   (MetaFrameStyle *style);
-void            meta_frame_style_unref (MetaFrameStyle *style);
-
-void            meta_frame_style_apply_scale (const MetaFrameStyle *style,
-                                              PangoFontDescription *font_desc);
-
-MetaFrameStyleSet* meta_frame_style_set_new   (MetaFrameStyleSet *parent);
-void               meta_frame_style_set_ref   (MetaFrameStyleSet *style_set);
-void               meta_frame_style_set_unref (MetaFrameStyleSet *style_set);
-
-MetaFrameStyle* meta_theme_get_frame_style (MetaTheme     *theme,
-                                            MetaFrameType  type,
-                                            MetaFrameFlags flags);
+MetaFrameLayout* meta_theme_get_frame_layout (MetaTheme     *theme,
+                                              MetaFrameType  type,
+                                              MetaFrameFlags flags);
 
 MetaStyleInfo * meta_theme_create_style_info (GdkScreen   *screen,
                                               const gchar *variant);

@@ -67,7 +67,7 @@ meta_frame_layout_new  (void)
    */
   layout->titlebar_spacing = 6;
   layout->has_title = TRUE;
-  layout->title_scale = 1.0;
+  layout->title_scale = PANGO_SCALE_MEDIUM;
   layout->icon_size = META_MINI_ICON_WIDTH;
 
   return layout;
@@ -117,7 +117,7 @@ meta_frame_layout_get_borders (const MetaFrameLayout *layout,
                                MetaFrameType          type,
                                MetaFrameBorders      *borders)
 {
-  int buttons_height, title_height, draggable_borders;
+  int buttons_height, content_height, draggable_borders;
   
   meta_frame_borders_clear (borders);
 
@@ -130,16 +130,15 @@ meta_frame_layout_get_borders (const MetaFrameLayout *layout,
   if (!layout->has_title)
     text_height = 0;
   
-  buttons_height = layout->button_height +
+  buttons_height = layout->icon_size +
     layout->button_border.top + layout->button_border.bottom;
-  title_height = text_height +
-    layout->title_vertical_pad +
-    layout->title_border.top + layout->title_border.bottom;
+  content_height = MAX (buttons_height, text_height) +
+                   layout->titlebar_border.top + layout->titlebar_border.bottom;
 
-  borders->visible.top    = MAX (buttons_height, title_height);
-  borders->visible.left   = layout->left_width;
-  borders->visible.right  = layout->right_width;
-  borders->visible.bottom = layout->bottom_height;
+  borders->visible.top    = layout->frame_border.top + content_height;
+  borders->visible.left   = layout->frame_border.left;
+  borders->visible.right  = layout->frame_border.right;
+  borders->visible.bottom = layout->frame_border.bottom;
 
   draggable_borders = meta_prefs_get_draggable_border_width ();
 
@@ -168,6 +167,15 @@ meta_frame_layout_get_borders (const MetaFrameLayout *layout,
   borders->total.right  = borders->invisible.right  + borders->visible.right;
   borders->total.bottom = borders->invisible.bottom + borders->visible.bottom;
   borders->total.top    = borders->invisible.top    + borders->visible.top;
+}
+
+void
+meta_frame_layout_apply_scale (const MetaFrameLayout *layout,
+                               PangoFontDescription  *font_desc)
+{
+  int size = pango_font_description_get_size (font_desc);
+  pango_font_description_set_size (font_desc,
+                                   MAX (size * layout->title_scale, 1));
 }
 
 static MetaButtonSpace*
@@ -288,12 +296,8 @@ meta_frame_layout_sync_with_style (MetaFrameLayout *layout,
   meta_style_info_set_flags (style_info, flags);
 
   style = style_info->styles[META_STYLE_ELEMENT_FRAME];
-  get_padding_and_border (style, &border);
-  scale_border (&border, layout->title_scale);
-
-  layout->left_width = border.left;
-  layout->right_width = border.right;
-  layout->bottom_height = border.bottom;
+  get_padding_and_border (style, &layout->frame_border);
+  scale_border (&layout->frame_border, layout->title_scale);
 
   if (layout->hide_buttons)
     layout->icon_size = 0;
@@ -312,36 +316,26 @@ meta_frame_layout_sync_with_style (MetaFrameLayout *layout,
    */
   layout->top_left_corner_rounded_radius = border_radius;
   layout->top_right_corner_rounded_radius = border_radius;
-  max_radius = MIN (layout->bottom_height, layout->left_width);
+  max_radius = MIN (layout->frame_border.bottom, layout->frame_border.left);
   layout->bottom_left_corner_rounded_radius = MAX (border_radius, max_radius);
-  max_radius = MIN (layout->bottom_height, layout->right_width);
+  max_radius = MIN (layout->frame_border.bottom, layout->frame_border.right);
   layout->bottom_right_corner_rounded_radius = MAX (border_radius, max_radius);
 
-  get_padding_and_border (style, &border);
-  scale_border (&border, layout->title_scale);
-  layout->left_titlebar_edge = border.left;
-  layout->right_titlebar_edge = border.right;
-  layout->title_vertical_pad = border.top;
-
-  layout->button_border.top = border.top;
-  layout->button_border.bottom = border.bottom;
-  layout->button_border.left = 0;
-  layout->button_border.right = 0;
-
-  layout->button_width = layout->icon_size;
-  layout->button_height = layout->icon_size;
+  get_padding_and_border (style, &layout->titlebar_border);
+  scale_border (&layout->titlebar_border, layout->title_scale);
 
   style = style_info->styles[META_STYLE_ELEMENT_BUTTON];
-  get_padding_and_border (style, &border);
-  scale_border (&border, layout->title_scale);
-  layout->button_width += border.left + border.right;
-  layout->button_height += border.top + border.bottom;
+  get_padding_and_border (style, &layout->button_border);
+  scale_border (&layout->button_border, layout->title_scale);
 
   style = style_info->styles[META_STYLE_ELEMENT_IMAGE];
   get_padding_and_border (style, &border);
   scale_border (&border, layout->title_scale);
-  layout->button_width += border.left + border.right;
-  layout->button_height += border.top + border.bottom;
+  
+  layout->button_border.left += border.left;
+  layout->button_border.right += border.right;
+  layout->button_border.top += border.top;
+  layout->button_border.bottom += border.bottom;
 }
 
 static void
@@ -361,6 +355,7 @@ meta_frame_layout_calc_geometry (MetaFrameLayout        *layout,
   int button_y;
   int title_right_edge;
   int width, height;
+  int content_width, content_height;
   int button_width, button_height;
   int min_size_for_rounding;
   
@@ -382,6 +377,12 @@ meta_frame_layout_calc_geometry (MetaFrameLayout        *layout,
 
   fgeom->borders = borders;
 
+  fgeom->content_border = layout->frame_border;
+  fgeom->content_border.left   += layout->titlebar_border.left;
+  fgeom->content_border.right  += layout->titlebar_border.right;
+  fgeom->content_border.top    += layout->titlebar_border.top;
+  fgeom->content_border.bottom += layout->titlebar_border.bottom;
+
   width = client_width + borders.total.left + borders.total.right;
 
   height = borders.total.top + borders.total.bottom;
@@ -391,13 +392,15 @@ meta_frame_layout_calc_geometry (MetaFrameLayout        *layout,
   fgeom->width = width;
   fgeom->height = height;
 
-  fgeom->top_titlebar_edge = layout->title_border.top;
-  fgeom->bottom_titlebar_edge = layout->title_border.bottom;
-  fgeom->left_titlebar_edge = layout->left_titlebar_edge;
-  fgeom->right_titlebar_edge = layout->right_titlebar_edge;
+  content_width = width -
+                  (fgeom->content_border.left + borders.invisible.left) -
+                  (fgeom->content_border.right + borders.invisible.right);
+  content_height = borders.visible.top - fgeom->content_border.top - fgeom->content_border.bottom;
 
-  button_width = layout->button_width;
-  button_height = layout->button_height;
+  button_width = layout->icon_size +
+                 layout->button_border.left + layout->button_border.right;
+  button_height = layout->icon_size +
+                  layout->button_border.top + layout->button_border.bottom;
 
   /* FIXME all this code sort of pretends that duplicate buttons
    * with the same function are allowed, but that breaks the
@@ -452,10 +455,7 @@ meta_frame_layout_calc_geometry (MetaFrameLayout        *layout,
   while (n_left > 0 || n_right > 0)
     {
       int space_used_by_buttons;
-      int space_available;
 
-      space_available = fgeom->width - layout->left_titlebar_edge - layout->right_titlebar_edge;
-      
       space_used_by_buttons = 0;
 
       space_used_by_buttons += button_width * n_left;
@@ -466,7 +466,7 @@ meta_frame_layout_calc_geometry (MetaFrameLayout        *layout,
       space_used_by_buttons += (button_width * 0.75) * n_right_spacers;
       space_used_by_buttons += layout->titlebar_spacing * MAX (n_right - 1, 0);
 
-      if (space_used_by_buttons <= space_available)
+      if (space_used_by_buttons <= content_width)
         break; /* Everything fits, bail out */
       
       /* First try to remove separators */
@@ -526,11 +526,11 @@ meta_frame_layout_calc_geometry (MetaFrameLayout        *layout,
   fgeom->n_right_buttons = n_right;
   
   /* center buttons vertically */
-  button_y = (borders.visible.top -
-              (button_height + layout->button_border.top + layout->button_border.bottom)) / 2 + layout->button_border.top + borders.invisible.top;
+  button_y = fgeom->content_border.top + borders.invisible.top +
+             (content_height - button_height) / 2;
 
   /* right edge of farthest-right button */
-  x = width - layout->right_titlebar_edge - borders.invisible.right;
+  x = width - fgeom->content_border.right - borders.invisible.right;
   
   i = n_right - 1;
   while (i >= 0)
@@ -559,7 +559,7 @@ meta_frame_layout_calc_geometry (MetaFrameLayout        *layout,
           rect->clickable.height = button_height + button_y;
 
           if (i == n_right - 1)
-            rect->clickable.width += layout->right_titlebar_edge + layout->right_width;
+            rect->clickable.width += fgeom->content_border.right;
 
         }
       else
@@ -574,12 +574,12 @@ meta_frame_layout_calc_geometry (MetaFrameLayout        *layout,
     }
 
   /* save right edge of titlebar for later use */
-  title_right_edge = x - layout->title_border.right;
+  title_right_edge = x;
 
   /* Now x changes to be position from the left and we go through
    * the left-side buttons
    */
-  x = layout->left_titlebar_edge + borders.invisible.left;
+  x = fgeom->content_border.left + borders.invisible.left;
   for (i = 0; i < n_left; i++)
     {
       MetaButtonSpace *rect;
@@ -618,13 +618,12 @@ meta_frame_layout_calc_geometry (MetaFrameLayout        *layout,
         x += (button_width * 0.75);
     }
 
-  /* We always fill as much vertical space as possible with title rect,
-   * rather than centering it like the buttons
-   */
-  fgeom->title_rect.x = x + layout->title_border.left;
-  fgeom->title_rect.y = layout->title_border.top + borders.invisible.top;
+  /* Center vertically in the available content area */
+  fgeom->title_rect.x = x;
+  fgeom->title_rect.y = fgeom->content_border.top + borders.invisible.top +
+                        (content_height - text_height) / 2;
   fgeom->title_rect.width = title_right_edge - fgeom->title_rect.x;
-  fgeom->title_rect.height = borders.visible.top - layout->title_border.top - layout->title_border.bottom;
+  fgeom->title_rect.height = text_height;
 
   /* Nuke title if it won't fit */
   if (fgeom->title_rect.width < 0 ||
@@ -653,77 +652,6 @@ meta_frame_layout_calc_geometry (MetaFrameLayout        *layout,
     fgeom->bottom_left_corner_rounded_radius = layout->bottom_left_corner_rounded_radius;
   if (borders.visible.bottom + borders.visible.right >= min_size_for_rounding)
     fgeom->bottom_right_corner_rounded_radius = layout->bottom_right_corner_rounded_radius;
-}
-
-/**
- * meta_frame_style_new:
- * @parent: The parent style. Data not filled in here will be
- *          looked for in the parent style, and in its parent
- *          style, and so on.
- *
- * Constructor for a MetaFrameStyle.
- *
- * Returns: (transfer full): The newly-constructed style.
- */
-MetaFrameStyle*
-meta_frame_style_new (MetaFrameStyle *parent)
-{
-  MetaFrameStyle *style;
-
-  style = g_new0 (MetaFrameStyle, 1);
-
-  style->refcount = 1;
-
-  style->parent = parent;
-  if (parent)
-    meta_frame_style_ref (parent);
-
-  return style;
-}
-
-/**
- * meta_frame_style_ref:
- * @style: The style.
- *
- * Increases the reference count of a frame style.
- */
-void
-meta_frame_style_ref (MetaFrameStyle *style)
-{
-  g_return_if_fail (style != NULL);
-
-  style->refcount += 1;
-}
-
-void
-meta_frame_style_unref (MetaFrameStyle *style)
-{
-  g_return_if_fail (style != NULL);
-  g_return_if_fail (style->refcount > 0);
-
-  style->refcount -= 1;
-
-  if (style->refcount == 0)
-    {
-      if (style->layout)
-        meta_frame_layout_unref (style->layout);
-
-      /* we hold a reference to any parent style */
-      if (style->parent)
-        meta_frame_style_unref (style->parent);
-
-      DEBUG_FILL_STRUCT (style);
-      g_free (style);
-    }
-}
-
-void
-meta_frame_style_apply_scale (const MetaFrameStyle *style,
-                              PangoFontDescription *font_desc)
-{
-  int size = pango_font_description_get_size (font_desc);
-  pango_font_description_set_size (font_desc,
-                                   MAX (size * style->layout->title_scale, 1));
 }
 
 static void
@@ -780,14 +708,14 @@ get_button_rect (MetaButtonType           type,
 }
 
 static void
-meta_frame_style_draw_with_style (MetaFrameStyle          *frame_style,
-                                  MetaStyleInfo           *style_info,
-                                  cairo_t                 *cr,
-                                  const MetaFrameGeometry *fgeom,
-                                  PangoLayout             *title_layout,
-                                  MetaFrameFlags           flags,
-                                  MetaButtonState          button_states[META_BUTTON_TYPE_LAST],
-                                  GdkPixbuf               *mini_icon)
+meta_frame_layout_draw_with_style (MetaFrameLayout         *layout,
+                                   MetaStyleInfo           *style_info,
+                                   cairo_t                 *cr,
+                                   const MetaFrameGeometry *fgeom,
+                                   PangoLayout             *title_layout,
+                                   MetaFrameFlags           flags,
+                                   MetaButtonState          button_states[META_BUTTON_TYPE_LAST],
+                                   GdkPixbuf               *mini_icon)
 {
   GtkStyleContext *style;
   GtkStateFlags state;
@@ -827,7 +755,7 @@ meta_frame_style_draw_with_style (MetaFrameStyle          *frame_style,
                     titlebar_rect.x, titlebar_rect.y,
                     titlebar_rect.width, titlebar_rect.height);
 
-  if (frame_style->layout->has_title && title_layout)
+  if (layout->has_title && title_layout)
     {
       PangoRectangle logical;
       int text_width, x, y;
@@ -909,7 +837,7 @@ meta_frame_style_draw_with_style (MetaFrameStyle          *frame_style,
               GtkIconTheme *theme = gtk_icon_theme_get_default ();
               GtkIconInfo *info;
               
-              info = gtk_icon_theme_lookup_icon (theme, icon_name, frame_style->layout->icon_size, 0);
+              info = gtk_icon_theme_lookup_icon (theme, icon_name, layout->icon_size, 0);
               pixbuf = gtk_icon_info_load_symbolic_for_context (info, style, NULL, NULL);
             }
 
@@ -925,8 +853,8 @@ meta_frame_style_draw_with_style (MetaFrameStyle          *frame_style,
 
               cairo_translate (cr, x, y);
               cairo_scale (cr,
-                           width / frame_style->layout->icon_size,
-                           height / frame_style->layout->icon_size);
+                           width / layout->icon_size,
+                           height / layout->icon_size);
 
               gdk_cairo_set_source_pixbuf (cr, pixbuf, 0, 0);
               cairo_paint (cr);
@@ -938,161 +866,6 @@ meta_frame_style_draw_with_style (MetaFrameStyle          *frame_style,
     }
 }
 
-MetaFrameStyleSet*
-meta_frame_style_set_new (MetaFrameStyleSet *parent)
-{
-  MetaFrameStyleSet *style_set;
-
-  style_set = g_new0 (MetaFrameStyleSet, 1);
-
-  style_set->parent = parent;
-  if (parent)
-    meta_frame_style_set_ref (parent);
-
-  style_set->refcount = 1;
-  
-  return style_set;
-}
-
-static void
-free_focus_styles (MetaFrameStyle *focus_styles[META_FRAME_FOCUS_LAST])
-{
-  int i;
-
-  for (i = 0; i < META_FRAME_FOCUS_LAST; i++)
-    if (focus_styles[i])
-      meta_frame_style_unref (focus_styles[i]);
-}
-
-LOCAL_SYMBOL void
-meta_frame_style_set_ref (MetaFrameStyleSet *style_set)
-{
-  g_return_if_fail (style_set != NULL);
-
-  style_set->refcount += 1;
-}
-
-LOCAL_SYMBOL void
-meta_frame_style_set_unref (MetaFrameStyleSet *style_set)
-{
-  g_return_if_fail (style_set != NULL);
-  g_return_if_fail (style_set->refcount > 0);
-
-  style_set->refcount -= 1;
-
-  if (style_set->refcount == 0)
-    {
-      int i;
-
-      for (i = 0; i < META_FRAME_RESIZE_LAST; i++)
-        {
-          free_focus_styles (style_set->normal_styles[i]);
-          free_focus_styles (style_set->shaded_styles[i]);
-        }
-
-      free_focus_styles (style_set->maximized_styles);
-      free_focus_styles (style_set->tiled_left_styles);
-      free_focus_styles (style_set->tiled_right_styles);
-      free_focus_styles (style_set->maximized_and_shaded_styles);
-      free_focus_styles (style_set->tiled_left_and_shaded_styles);
-      free_focus_styles (style_set->tiled_right_and_shaded_styles);
-
-      if (style_set->parent)
-        meta_frame_style_set_unref (style_set->parent);
-
-      DEBUG_FILL_STRUCT (style_set);
-      g_free (style_set);
-    }
-}
-
-
-static MetaFrameStyle*
-get_style (MetaFrameStyleSet *style_set,
-           MetaFrameState     state,
-           MetaFrameResize    resize,
-           MetaFrameFocus     focus)
-{
-  MetaFrameStyle *style;  
-  
-  style = NULL;
-
-  switch (state)
-    {
-    case META_FRAME_STATE_NORMAL:
-    case META_FRAME_STATE_SHADED:
-      {
-        if (state == META_FRAME_STATE_SHADED)
-          style = style_set->shaded_styles[resize][focus];
-        else
-          style = style_set->normal_styles[resize][focus];
-
-        /* Try parent if we failed here */
-        if (style == NULL && style_set->parent)
-          style = get_style (style_set->parent, state, resize, focus);
-      
-        /* Allow people to omit the vert/horz/none resize modes */
-        if (style == NULL &&
-            resize != META_FRAME_RESIZE_BOTH)
-          style = get_style (style_set, state, META_FRAME_RESIZE_BOTH, focus);
-      }
-      break;
-    default:
-      {
-        MetaFrameStyle **styles;
-
-        styles = NULL;
-      
-        switch (state)
-          {
-          case META_FRAME_STATE_MAXIMIZED:
-            styles = style_set->maximized_styles;
-            break;
-          case META_FRAME_STATE_TILED_LEFT:
-            styles = style_set->tiled_left_styles;
-            break;
-          case META_FRAME_STATE_TILED_RIGHT:
-            styles = style_set->tiled_right_styles;
-            break;
-          case META_FRAME_STATE_MAXIMIZED_AND_SHADED:
-            styles = style_set->maximized_and_shaded_styles;
-            break;
-          case META_FRAME_STATE_TILED_LEFT_AND_SHADED:
-            styles = style_set->tiled_left_and_shaded_styles;
-            break;
-          case META_FRAME_STATE_TILED_RIGHT_AND_SHADED:
-            styles = style_set->tiled_right_and_shaded_styles;
-            break;
-          case META_FRAME_STATE_NORMAL:
-          case META_FRAME_STATE_SHADED:
-          case META_FRAME_STATE_LAST:
-            g_assert_not_reached ();
-            break;
-          }
-
-        style = styles[focus];
-
-        /* Tiled states are optional, try falling back to non-tiled states */
-        if (style == NULL)
-          {
-            if (state == META_FRAME_STATE_TILED_LEFT ||
-                state == META_FRAME_STATE_TILED_RIGHT)
-              style = get_style (style_set, META_FRAME_STATE_NORMAL,
-                                 resize, focus);
-            else if (state == META_FRAME_STATE_TILED_LEFT_AND_SHADED ||
-                     state == META_FRAME_STATE_TILED_RIGHT_AND_SHADED)
-              style = get_style (style_set, META_FRAME_STATE_SHADED,
-                                 resize, focus);
-          }
-
-        /* Try parent if we failed here */
-        if (style == NULL && style_set->parent)
-          style = get_style (style_set->parent, state, resize, focus);      
-      }
-    }
-
-  return style;
-}
-
 /**
  * meta_theme_get_default: (skip)
  *
@@ -1101,7 +874,7 @@ MetaTheme*
 meta_theme_get_default (void)
 {
   static MetaTheme *theme = NULL;
-  int i, j, frame_type;
+  int frame_type;
 
   if (theme)
     return theme;
@@ -1110,10 +883,7 @@ meta_theme_get_default (void)
   
   for (frame_type = 0; frame_type < META_FRAME_TYPE_LAST; frame_type++)
     {
-      MetaFrameStyleSet *style_set = meta_frame_style_set_new (NULL);
-      MetaFrameStyle *style = meta_frame_style_new (NULL);
-
-      style->layout = meta_frame_layout_new ();
+      MetaFrameLayout *layout = meta_frame_layout_new ();
 
       switch (frame_type)
         {
@@ -1122,52 +892,21 @@ meta_theme_get_default (void)
         case META_FRAME_TYPE_DIALOG:
         case META_FRAME_TYPE_MODAL_DIALOG:
         case META_FRAME_TYPE_ATTACHED:
-          style->layout->hide_buttons = TRUE;
+          layout->hide_buttons = TRUE;
           break;
         case META_FRAME_TYPE_MENU:
         case META_FRAME_TYPE_UTILITY:
-          style->layout->title_scale = PANGO_SCALE_SMALL;
+          layout->title_scale = PANGO_SCALE_SMALL;
           break;
         case META_FRAME_TYPE_BORDER:
-          style->layout->has_title = FALSE;
-          style->layout->hide_buttons = TRUE;
+          layout->has_title = FALSE;
+          layout->hide_buttons = TRUE;
           break;
         default:
           g_assert_not_reached ();
         }
 
-      for (i = 0; i < META_FRAME_FOCUS_LAST; i++)
-        {
-          for (j = 0; j < META_FRAME_RESIZE_LAST; j++)
-            {
-              meta_frame_style_ref (style);
-              style_set->normal_styles[j][i] = style;
-
-              meta_frame_style_ref (style);
-              style_set->shaded_styles[j][i] = style;
-            }
-
-          meta_frame_style_ref (style);
-          style_set->maximized_styles[i] = style;
-
-          meta_frame_style_ref (style);
-          style_set->tiled_left_styles[i] = style;
-
-          meta_frame_style_ref (style);
-          style_set->tiled_right_styles[i] = style;
-
-          meta_frame_style_ref (style);
-          style_set->maximized_and_shaded_styles[i] = style;
-
-          meta_frame_style_ref (style);
-          style_set->tiled_left_and_shaded_styles[i] = style;
-
-          meta_frame_style_ref (style);
-          style_set->tiled_right_and_shaded_styles[i] = style;
-        }
-
-      meta_frame_style_unref (style);
-      theme->style_sets_by_type[frame_type] = style_set;
+      theme->layouts[frame_type] = layout;
     }
   return theme;
 }
@@ -1191,111 +930,21 @@ meta_theme_free (MetaTheme *theme)
   g_return_if_fail (theme != NULL);
 
   for (i = 0; i < META_FRAME_TYPE_LAST; i++)
-    if (theme->style_sets_by_type[i])
-      meta_frame_style_set_unref (theme->style_sets_by_type[i]);
+    if (theme->layouts[i])
+      meta_frame_layout_unref (theme->layouts[i]);
 
   DEBUG_FILL_STRUCT (theme);
   g_free (theme);
 }
 
-static MetaFrameStyle*
-theme_get_style (MetaTheme     *theme,
-                 MetaFrameType  type,
-                 MetaFrameFlags flags)
+MetaFrameLayout*
+meta_theme_get_frame_layout (MetaTheme     *theme,
+                             MetaFrameType  type,
+                             MetaFrameFlags flags)
 {
-  MetaFrameState state;
-  MetaFrameResize resize;
-  MetaFrameFocus focus;
-  MetaFrameStyle *style;
-  MetaFrameStyleSet *style_set;
-
-  style_set = theme->style_sets_by_type[type];
-
-  switch (flags & (META_FRAME_MAXIMIZED | META_FRAME_SHADED |
-                   META_FRAME_TILED_LEFT | META_FRAME_TILED_RIGHT))
-    {
-    case 0:
-      state = META_FRAME_STATE_NORMAL;
-      break;
-    case META_FRAME_MAXIMIZED:
-      state = META_FRAME_STATE_MAXIMIZED;
-      break;
-    case META_FRAME_TILED_LEFT:
-      state = META_FRAME_STATE_TILED_LEFT;
-      break;
-    case META_FRAME_TILED_RIGHT:
-      state = META_FRAME_STATE_TILED_RIGHT;
-      break;
-    case META_FRAME_SHADED:
-      state = META_FRAME_STATE_SHADED;
-      break;
-    case (META_FRAME_MAXIMIZED | META_FRAME_SHADED):
-      state = META_FRAME_STATE_MAXIMIZED_AND_SHADED;
-      break;
-    case (META_FRAME_TILED_LEFT | META_FRAME_SHADED):
-      state = META_FRAME_STATE_TILED_LEFT_AND_SHADED;
-      break;
-    case (META_FRAME_TILED_RIGHT | META_FRAME_SHADED):
-      state = META_FRAME_STATE_TILED_RIGHT_AND_SHADED;
-      break;
-    default:
-      g_assert_not_reached ();
-      state = META_FRAME_STATE_LAST; /* compiler */
-      break;
-    }
-
-  switch (flags & (META_FRAME_ALLOWS_VERTICAL_RESIZE | META_FRAME_ALLOWS_HORIZONTAL_RESIZE))
-    {
-    case 0:
-      resize = META_FRAME_RESIZE_NONE;
-      break;
-    case META_FRAME_ALLOWS_VERTICAL_RESIZE:
-    case META_FRAME_ALLOWS_BOTTOM_RESIZE:
-    case META_FRAME_ALLOWS_TOP_RESIZE:
-      resize = META_FRAME_RESIZE_VERTICAL;
-      break;
-    case META_FRAME_ALLOWS_HORIZONTAL_RESIZE:
-    case META_FRAME_ALLOWS_LEFT_RESIZE:
-    case META_FRAME_ALLOWS_RIGHT_RESIZE:
-      resize = META_FRAME_RESIZE_HORIZONTAL;
-      break;
-    case (META_FRAME_ALLOWS_VERTICAL_RESIZE | META_FRAME_ALLOWS_HORIZONTAL_RESIZE):
-    case (META_FRAME_ALLOWS_LEFT_RESIZE | META_FRAME_ALLOWS_BOTTOM_RESIZE):
-    case (META_FRAME_ALLOWS_RIGHT_RESIZE | META_FRAME_ALLOWS_BOTTOM_RESIZE):
-    case (META_FRAME_ALLOWS_LEFT_RESIZE | META_FRAME_ALLOWS_TOP_RESIZE):
-    case (META_FRAME_ALLOWS_RIGHT_RESIZE | META_FRAME_ALLOWS_TOP_RESIZE):
-      resize = META_FRAME_RESIZE_BOTH;
-      break;
-    default:
-      g_assert_not_reached ();
-      resize = META_FRAME_RESIZE_LAST; /* compiler */
-      break;
-    }
+   g_return_val_if_fail (type < META_FRAME_TYPE_LAST, NULL);
   
-  /* re invert the styles used for focus/unfocussed while flashing a frame */
-  if (((flags & META_FRAME_HAS_FOCUS) && !(flags & META_FRAME_IS_FLASHING))
-      || (!(flags & META_FRAME_HAS_FOCUS) && (flags & META_FRAME_IS_FLASHING)))
-    focus = META_FRAME_FOCUS_YES;
-  else
-    focus = META_FRAME_FOCUS_NO;
-
-  style = get_style (style_set, state, resize, focus);
-
-  return style;
-}
-
-MetaFrameStyle*
-meta_theme_get_frame_style (MetaTheme     *theme,
-                            MetaFrameType  type,
-                            MetaFrameFlags flags)
-{
-  MetaFrameStyle *style;
-
-  g_return_val_if_fail (type < META_FRAME_TYPE_LAST, NULL);
-  
-  style = theme_get_style (theme, type, flags);
-
-  return style;
+  return theme->layouts[type];
 }
 
 static GtkStyleContext *
@@ -1522,17 +1171,17 @@ meta_theme_draw_frame (MetaTheme              *theme,
                        GdkPixbuf              *mini_icon)
 {
   MetaFrameGeometry fgeom;
-  MetaFrameStyle *style;
+  MetaFrameLayout *layout;
 
   g_return_if_fail (type < META_FRAME_TYPE_LAST);
   
-  style = theme_get_style (theme, type, flags);
+  layout = theme->layouts[type];
   
   /* Parser is not supposed to allow this currently */
-  if (style == NULL)
+  if (layout == NULL)
     return;
   
-  meta_frame_layout_calc_geometry (style->layout,
+  meta_frame_layout_calc_geometry (layout,
                                    style_info,
                                    text_height,
                                    flags,
@@ -1542,14 +1191,14 @@ meta_theme_draw_frame (MetaTheme              *theme,
                                    &fgeom,
                                    theme);  
 
-  meta_frame_style_draw_with_style (style,
-                                    style_info,
-                                    cr,
-                                    &fgeom,
-                                    title_layout,
-                                    flags,
-                                    button_states,
-                                    mini_icon);
+  meta_frame_layout_draw_with_style (layout,
+                                     style_info,
+                                     cr,
+                                     &fgeom,
+                                     title_layout,
+                                     flags,
+                                     button_states,
+                                     mini_icon);
 }
 
 void
@@ -1560,21 +1209,21 @@ meta_theme_get_frame_borders (MetaTheme        *theme,
                               MetaFrameFlags    flags,
                               MetaFrameBorders *borders)
 {
-  MetaFrameStyle *style;
+  MetaFrameLayout *layout;
 
   g_return_if_fail (type < META_FRAME_TYPE_LAST);
 
-  style = theme_get_style (theme, type, flags);
+  layout = theme->layouts[type];
 
   meta_frame_borders_clear (borders);
 
   /* Parser is not supposed to allow this currently */
-  if (style == NULL)
+  if (layout == NULL)
     return;
 
-  meta_frame_layout_sync_with_style (style->layout, style_info, flags);
+  meta_frame_layout_sync_with_style (layout, style_info, flags);
 
-  meta_frame_layout_get_borders (style->layout,
+  meta_frame_layout_get_borders (layout,
                                  text_height,
                                  flags, type,
                                  borders);
@@ -1591,17 +1240,17 @@ meta_theme_calc_geometry (MetaTheme              *theme,
                           const MetaButtonLayout *button_layout,
                           MetaFrameGeometry      *fgeom)
 {
-  MetaFrameStyle *style;
+  MetaFrameLayout *layout;
 
   g_return_if_fail (type < META_FRAME_TYPE_LAST);
   
-  style = theme_get_style (theme, type, flags);
+  layout = theme->layouts[type];
   
   /* Parser is not supposed to allow this currently */
-  if (style == NULL)
+  if (layout == NULL)
     return;
 
-  meta_frame_layout_calc_geometry (style->layout,
+  meta_frame_layout_calc_geometry (layout,
                                    style_info,
                                    text_height,
                                    flags,
