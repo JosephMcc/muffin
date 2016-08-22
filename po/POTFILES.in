@@ -24,5 +24,4 @@ src/ui/menu.c
 src/ui/metaaccellabel.c
 src/ui/resizepopup.c
 src/ui/theme.c
-src/ui/theme-parser.c
 
