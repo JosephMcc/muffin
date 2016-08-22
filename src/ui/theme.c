@@ -21,17 +21,6 @@
  * 02110-1335, USA.
  */
 
-/**
- * SECTION:theme
- * @short_description: Making Metacity look pretty
- *
- * The window decorations drawn by Metacity are described by files on disk
- * known internally as "themes" (externally as "window border themes" on
- * http://art.gnome.org/themes/metacity/ or "Metacity themes"). This file
- * contains most of the code necessary to support themes; it does not
- * contain the XML parser, which is in theme-parser.c.
- */
-
 #include <config.h>
 #include "theme-private.h"
 #include "frames.h" /* for META_TYPE_FRAMES */
@@ -700,10 +689,27 @@ get_button_rect (MetaButtonType           type,
     case META_BUTTON_TYPE_MENU:
       *rect = fgeom->menu_rect.visible;
       break;
-      
+    
+    default:  
     case META_BUTTON_TYPE_LAST:
       g_assert_not_reached ();
       break;
+    }
+}
+
+static const char *
+get_class_from_button_type (MetaButtonType type)
+{
+  switch (type)
+    {
+    case META_BUTTON_TYPE_CLOSE:
+      return "close";
+    case META_BUTTON_TYPE_MAXIMIZE:
+      return "maximize";
+    case META_BUTTON_TYPE_MINIMIZE:
+      return "minimize";
+    default:
+      return NULL;
     }
 }
 
@@ -785,6 +791,10 @@ meta_frame_layout_draw_with_style (MetaFrameLayout         *layout,
   state = gtk_style_context_get_state (style);
   for (button_type = META_BUTTON_TYPE_CLOSE; button_type < META_BUTTON_TYPE_LAST; button_type++)
     {
+      const char *button_class = get_class_from_button_type (button_type);
+      if (button_class)
+        gtk_style_context_add_class (style, button_class);
+
       get_button_rect (button_type, fgeom, &button_rect);
 
       if (button_states[button_type] == META_BUTTON_STATE_PRELIGHT)
@@ -795,10 +805,8 @@ meta_frame_layout_draw_with_style (MetaFrameLayout         *layout,
         gtk_style_context_set_state (style, state);
 
       cairo_save (cr);
-      gdk_cairo_rectangle (cr, &button_rect);
-      cairo_clip (cr);
 
-      if (gdk_cairo_get_clip_rectangle (cr, NULL))
+      if (button_rect.width > 0 && button_rect.height > 0)
         {
           GdkPixbuf *pixbuf = NULL;
           const char *icon_name = NULL;
@@ -863,6 +871,8 @@ meta_frame_layout_draw_with_style (MetaFrameLayout         *layout,
             }
         }
       cairo_restore (cr);
+      if (button_class)
+        gtk_style_context_remove_class (style, button_class);
     }
 }
 
@@ -888,11 +898,9 @@ meta_theme_get_default (void)
       switch (frame_type)
         {
         case META_FRAME_TYPE_NORMAL:
-          break;
         case META_FRAME_TYPE_DIALOG:
         case META_FRAME_TYPE_MODAL_DIALOG:
         case META_FRAME_TYPE_ATTACHED:
-          layout->hide_buttons = TRUE;
           break;
         case META_FRAME_TYPE_MENU:
         case META_FRAME_TYPE_UTILITY:
