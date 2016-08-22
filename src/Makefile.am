@@ -149,8 +149,6 @@ libmuffin_la_SOURCES =				\
 	meta/theme.h				\
 	ui/theme-private.h			\
 	ui/ui.c					\
-	meta/preview-widget.h			\
-	ui/preview-widget.c			\
 	$(muffin_built_sources)
 
 libmuffin_la_LDFLAGS = -no-undefined
@@ -185,7 +183,6 @@ libmuffininclude_base_headers =		\
 # Excluded from scanning for introspection but installed
 # atomnames.h: macros cause problems for scanning process
 libmuffininclude_extra_headers =		\
-	meta/preview-widget.h			\
 	meta/atomnames.h
 
 libmuffinincludedir = $(includedir)/muffin/meta
@@ -194,10 +191,7 @@ libmuffininclude_HEADERS =			\
 	$(libmuffininclude_base_headers)	\
 	$(libmuffininclude_extra_headers)
 
-muffin_theme_viewer_SOURCES=  \
-	ui/theme-viewer.c
-
-bin_PROGRAMS=muffin muffin-theme-viewer
+bin_PROGRAMS=muffin
 
 muffin_SOURCES = core/muffin.c
 muffin_LDADD = $(MUFFIN_LIBS) libmuffin.la -lclutter-glx-1.0
@@ -238,8 +232,6 @@ Meta-$(api_version).gir: libmuffin.la
 @META_GIR@_SCANNERFLAGS = --warn-all --warn-error
 
 endif
-
-muffin_theme_viewer_LDADD= $(MUFFIN_LIBS) libmuffin.la
 
 testboxes_SOURCES = core/testboxes.c core/boxes.c core/util.c
 testgradient_SOURCES = ui/testgradient.c

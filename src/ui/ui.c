@@ -336,6 +336,17 @@ meta_ui_get_corner_radiuses (MetaUI *ui,
                                    bottom_left, bottom_right);
 }
 
+static void
+set_background_none (Display *xdisplay,
+                     Window   xwindow)
+{
+  XSetWindowAttributes attrs;
+
+  attrs.background_pixmap = None;
+  XChangeWindowAttributes (xdisplay, xwindow,
+                           CWBackPixmap, &attrs);
+}
+
 LOCAL_SYMBOL Window
 meta_ui_create_frame_window (MetaUI *ui,
                              Display *xdisplay,
@@ -402,6 +413,7 @@ meta_ui_create_frame_window (MetaUI *ui,
 		    &attrs, attributes_mask);
 
   gdk_window_resize (window, width, height);
+  set_background_none (xdisplay, GDK_WINDOW_XID (window));
   
   meta_frames_manage_window (ui->frames, GDK_WINDOW_XID (window), window);
 
@@ -455,16 +467,6 @@ meta_ui_unmap_frame (MetaUI *ui,
 }
 
 LOCAL_SYMBOL void
-meta_ui_unflicker_frame_bg (MetaUI *ui,
-                            Window  xwindow,
-                            int     target_width,
-                            int     target_height)
-{
-  meta_frames_unflicker_bg (ui->frames, xwindow,
-                            target_width, target_height);
-}
-
-LOCAL_SYMBOL void
 meta_ui_update_frame_style (MetaUI  *ui,
                             Window   xwindow)
 {
@@ -476,13 +478,6 @@ meta_ui_repaint_frame (MetaUI *ui,
                        Window xwindow)
 {
   meta_frames_repaint_frame (ui->frames, xwindow);
-}
-
-LOCAL_SYMBOL void
-meta_ui_reset_frame_bg (MetaUI *ui,
-                        Window xwindow)
-{
-  meta_frames_reset_bg (ui->frames, xwindow);
 }
 
 LOCAL_SYMBOL cairo_region_t *
@@ -734,7 +729,7 @@ meta_ui_theme_get_frame_borders (MetaUI *ui,
                                  MetaFrameBorders  *borders)
 {
   int text_height;
-  GtkStyleContext *style = NULL;
+  MetaStyleInfo *style_info = NULL;
   PangoContext *context;
   const PangoFontDescription *font_desc;
   PangoFontDescription *free_font_desc = NULL;
@@ -746,10 +741,11 @@ meta_ui_theme_get_frame_borders (MetaUI *ui,
 
       if (!font_desc)
         {
-          style = gtk_style_context_new ();
-          gtk_style_context_get (style, GTK_STATE_FLAG_NORMAL,
-                                 GTK_STYLE_PROPERTY_FONT, &free_font_desc,
-                                 NULL);
+          GdkDisplay *display = gdk_x11_lookup_xdisplay (ui->xdisplay);
+          GdkScreen *screen = gdk_display_get_screen (display, XScreenNumberOfScreen (ui->xscreen));
+
+          style_info = meta_theme_create_style_info (screen, NULL);
+          free_font_desc = meta_style_info_create_font_desc (style_info);
           font_desc = (const PangoFontDescription *) free_font_desc;
         }
 
@@ -767,8 +763,8 @@ meta_ui_theme_get_frame_borders (MetaUI *ui,
       meta_frame_borders_clear (borders);
     }
 
-  if (style != NULL)
-    g_object_unref (style);
+  if (style_info != NULL)
+    meta_style_info_unref (style_info);
 }
 
 LOCAL_SYMBOL void
