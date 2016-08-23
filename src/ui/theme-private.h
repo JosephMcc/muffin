@@ -70,7 +70,7 @@ struct _MetaFrameLayout
   GtkBorder title_margin;
   /** Margin of titlebar buttons */
   GtkBorder button_margin;
-  
+
   /** Min size of titlebar region */
   GtkRequisition titlebar_min_size;
   /** Min size of titlebar buttons */
@@ -310,6 +310,7 @@ void meta_theme_calc_geometry (MetaTheme              *theme,
 /* random stuff */
 int                   meta_pango_font_desc_get_text_height (const PangoFontDescription *font_desc,
                                                             PangoContext         *context);
+int                   meta_theme_get_window_scaling_factor (void);
 
 /* What version of the theme file format were various features introduced in? */
 #define META_THEME_SHADE_STICK_ABOVE_BUTTONS 2
