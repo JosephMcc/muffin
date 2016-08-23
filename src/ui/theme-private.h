@@ -65,6 +65,18 @@ struct _MetaFrameLayout
   /** Border/padding of titlebar buttons */
   GtkBorder button_border;
 
+#if GTK_CHECK_VERSION (3, 20, 0)
+  /** Margin of title */
+  GtkBorder title_margin;
+  /** Margin of titlebar buttons */
+  GtkBorder button_margin;
+  
+  /** Min size of titlebar region */
+  GtkRequisition titlebar_min_size;
+  /** Min size of titlebar buttons */
+  GtkRequisition button_min_size;
+#endif
+
   /** Size of images in buttons */
   guint icon_size;
 

@@ -118,10 +118,25 @@ meta_frame_layout_get_borders (const MetaFrameLayout *layout,
 
   if (!layout->has_title)
     text_height = 0;
-  
+#if GTK_CHECK_VERSION (3, 20, 0)
+  else
+    text_height = layout->title_margin.top + text_height + layout->title_margin.bottom;
+#endif
+
+#if GTK_CHECK_VERSION (3, 20, 0)
+  buttons_height = MAX ((int)layout->icon_size, layout->button_min_size.height) +
+    layout->button_margin.top + layout->button_border.top +
+    layout->button_margin.bottom + layout->button_border.bottom;
+#else
   buttons_height = layout->icon_size +
     layout->button_border.top + layout->button_border.bottom;
+#endif
+#if GTK_CHECK_VERSION (3, 20, 0)
+  content_height = MAX (buttons_height, text_height);
+  content_height = MAX (content_height, layout->titlebar_min_size.height) +
+#else
   content_height = MAX (buttons_height, text_height) +
+#endif
                    layout->titlebar_border.top + layout->titlebar_border.bottom;
 
   borders->visible.top    = layout->frame_border.top + content_height;
@@ -263,6 +278,18 @@ get_padding_and_border (GtkStyleContext *style,
   border->bottom += tmp.bottom;
 }
 
+#if GTK_CHECK_VERSION (3, 20, 0)
+static void
+get_min_size (GtkStyleContext *style,
+              GtkRequisition  *requisition)
+{
+  gtk_style_context_get (style, gtk_style_context_get_state (style),
+                         "min-width", &requisition->width,
+                         "min-height", &requisition->height,
+                         NULL);
+}
+#endif
+
 static void
 scale_border (GtkBorder *border,
               double     factor)
@@ -280,6 +307,9 @@ meta_frame_layout_sync_with_style (MetaFrameLayout *layout,
 {
   GtkStyleContext *style;
   GtkBorder border;
+#if GTK_CHECK_VERSION (3, 20, 0)
+  GtkRequisition requisition;
+#endif
   int border_radius, max_radius;
 
   meta_style_info_set_flags (style_info, flags);
@@ -310,14 +340,35 @@ meta_frame_layout_sync_with_style (MetaFrameLayout *layout,
   max_radius = MIN (layout->frame_border.bottom, layout->frame_border.right);
   layout->bottom_right_corner_rounded_radius = MAX (border_radius, max_radius);
 
+#if GTK_CHECK_VERSION (3, 20, 0)
+  get_min_size (style, &layout->titlebar_min_size);
+#endif
   get_padding_and_border (style, &layout->titlebar_border);
   scale_border (&layout->titlebar_border, layout->title_scale);
 
+#if GTK_CHECK_VERSION (3, 20, 0)
+  style = style_info->styles[META_STYLE_ELEMENT_TITLE];
+  gtk_style_context_get_margin (style, gtk_style_context_get_state (style),
+                                &layout->title_margin);
+  scale_border (&layout->title_margin, layout->title_scale);
+#endif
+
   style = style_info->styles[META_STYLE_ELEMENT_BUTTON];
+#if GTK_CHECK_VERSION (3, 20, 0)
+  get_min_size (style, &layout->button_min_size);
+#endif
   get_padding_and_border (style, &layout->button_border);
   scale_border (&layout->button_border, layout->title_scale);
+#if GTK_CHECK_VERSION (3, 20, 0)
+  gtk_style_context_get_margin (style, gtk_style_context_get_state (style),
+                                &layout->button_margin);
+  scale_border (&layout->button_margin, layout->title_scale);
+#endif
 
   style = style_info->styles[META_STYLE_ELEMENT_IMAGE];
+#if GTK_CHECK_VERSION (3, 20, 0)
+  get_min_size (style, &requisition);
+#endif
   get_padding_and_border (style, &border);
   scale_border (&border, layout->title_scale);
   
@@ -325,6 +376,20 @@ meta_frame_layout_sync_with_style (MetaFrameLayout *layout,
   layout->button_border.right += border.right;
   layout->button_border.top += border.top;
   layout->button_border.bottom += border.bottom;
+
+#if GTK_CHECK_VERSION (3, 20, 0)
+  gtk_style_context_get_margin (style, gtk_style_context_get_state (style),
+                                &border);
+  layout->button_border.left += border.left;
+  layout->button_border.right += border.right;
+  layout->button_border.top += border.top;
+  layout->button_border.bottom += border.bottom;
+
+  layout->button_min_size.width = MAX(layout->button_min_size.width,
+                                      requisition.width);
+  layout->button_min_size.height = MAX(layout->button_min_size.height,
+                                       requisition.height);
+#endif
 }
 
 static void
@@ -386,9 +451,17 @@ meta_frame_layout_calc_geometry (MetaFrameLayout        *layout,
                   (fgeom->content_border.right + borders.invisible.right);
   content_height = borders.visible.top - fgeom->content_border.top - fgeom->content_border.bottom;
 
+#if GTK_CHECK_VERSION (3, 20, 0)
+  button_width = MAX ((int)layout->icon_size, layout->button_min_size.width) +
+#else
   button_width = layout->icon_size +
+#endif
                  layout->button_border.left + layout->button_border.right;
+#if GTK_CHECK_VERSION (3, 20, 0)
+  button_height = MAX ((int)layout->icon_size, layout->button_min_size.height) +
+#else
   button_height = layout->icon_size +
+#endif
                   layout->button_border.top + layout->button_border.bottom;
 
   /* FIXME all this code sort of pretends that duplicate buttons
@@ -447,11 +520,23 @@ meta_frame_layout_calc_geometry (MetaFrameLayout        *layout,
 
       space_used_by_buttons = 0;
 
+#if GTK_CHECK_VERSION (3, 20, 0)
+      space_used_by_buttons += layout->button_margin.left * scale * n_left;
+#endif
       space_used_by_buttons += button_width * n_left;
+#if GTK_CHECK_VERSION (3, 20, 0)
+      space_used_by_buttons += layout->button_margin.right * scale * n_left;
+#endif
       space_used_by_buttons += (button_width * 0.75) * n_left_spacers;
       space_used_by_buttons += layout->titlebar_spacing * MAX (n_left - 1, 0);
 
+#if GTK_CHECK_VERSION (3, 20, 0)
+      space_used_by_buttons += layout->button_margin.left * scale * n_right;
+#endif
       space_used_by_buttons += button_width * n_right;
+#if GTK_CHECK_VERSION (3, 20, 0)
+      space_used_by_buttons += layout->button_margin.right * scale * n_right;
+#endif
       space_used_by_buttons += (button_width * 0.75) * n_right_spacers;
       space_used_by_buttons += layout->titlebar_spacing * MAX (n_right - 1, 0);
 
@@ -528,6 +613,10 @@ meta_frame_layout_calc_geometry (MetaFrameLayout        *layout,
 
       if (x < 0) /* if we go negative, leave the buttons we don't get to as 0-width */
         break;
+
+#if GTK_CHECK_VERSION (3, 20, 0)
+      x -= layout->button_margin.right * scale;
+#endif
       
       rect = right_func_rects[i];
       rect->visible.x = x - button_width;
@@ -554,7 +643,11 @@ meta_frame_layout_calc_geometry (MetaFrameLayout        *layout,
       else
         g_memmove (&(rect->clickable), &(rect->visible), sizeof(rect->clickable));
 
+#if GTK_CHECK_VERSION (3, 20, 0)
+      x = rect->visible.x - layout->button_margin.left * scale;
+#else
       x = rect->visible.x;
+#endif
 
       if (i > 0)
         x -= layout->titlebar_spacing;
@@ -572,6 +665,10 @@ meta_frame_layout_calc_geometry (MetaFrameLayout        *layout,
   for (i = 0; i < n_left; i++)
     {
       MetaButtonSpace *rect;
+
+#if GTK_CHECK_VERSION (3, 20, 0)
+      x += layout->button_margin.left * scale;
+#endif
 
       rect = left_func_rects[i];
       
@@ -599,8 +696,11 @@ meta_frame_layout_calc_geometry (MetaFrameLayout        *layout,
         else
           g_memmove (&(rect->clickable), &(rect->visible), sizeof(rect->clickable));
 
-
+#if GTK_CHECK_VERSION (3, 20, 0)
+      x = rect->visible.x + rect->visible.width + layout->button_margin.right * scale;
+#else
       x = rect->visible.x + rect->visible.width;
+#endif
       if (i < n_left - 1)
         x += layout->titlebar_spacing;
       if (left_buttons_has_spacer[i])
@@ -956,6 +1056,114 @@ meta_theme_get_frame_layout (MetaTheme     *theme,
   return theme->layouts[type];
 }
 
+#if GTK_CHECK_VERSION (3, 20, 0)
+
+static GtkStyleContext *
+create_style_context (GType            widget_type,
+                      GtkStyleContext *parent_style,
+                      GtkCssProvider  *provider,
+                      const char      *object_name,
+                      const char      *first_class,
+                      ...)
+{
+  GtkStyleContext *style;
+  GtkWidgetPath *path;
+  const char *name;
+  va_list ap;
+
+  style = gtk_style_context_new ();
+  gtk_style_context_set_parent (style, parent_style);
+
+  if (parent_style)
+    path = gtk_widget_path_copy (gtk_style_context_get_path (parent_style));
+  else
+    path = gtk_widget_path_new ();
+
+  gtk_widget_path_append_type (path, widget_type);
+
+  if (object_name)
+    gtk_widget_path_iter_set_object_name (path, -1, object_name);
+
+  va_start (ap, first_class);
+  for (name = first_class; name; name = va_arg (ap, const char *))
+    gtk_widget_path_iter_add_class (path, -1, name);
+  va_end (ap);
+
+  gtk_style_context_set_path (style, path);
+  gtk_widget_path_unref (path);
+
+  gtk_style_context_add_provider (style, GTK_STYLE_PROVIDER (provider),
+                                  GTK_STYLE_PROVIDER_PRIORITY_SETTINGS);
+
+  return style;
+}
+
+MetaStyleInfo *
+meta_theme_create_style_info (GdkScreen   *screen,
+                              const gchar *variant)
+{
+  MetaStyleInfo *style_info;
+  GtkCssProvider *provider;
+  char *theme_name;
+
+  g_object_get (gtk_settings_get_for_screen (screen),
+                "gtk-theme-name", &theme_name,
+                NULL);
+
+  if (theme_name && *theme_name)
+    provider = gtk_css_provider_get_named (theme_name, variant);
+  else
+    provider = gtk_css_provider_get_default ();
+  g_free (theme_name);
+
+  style_info = g_new0 (MetaStyleInfo, 1);
+  style_info->refcount = 1;
+
+  style_info->styles[META_STYLE_ELEMENT_FRAME] =
+    create_style_context (META_TYPE_FRAMES,
+                          NULL,
+                          provider,
+                          "decoration",
+                          GTK_STYLE_CLASS_BACKGROUND,
+                          "window-frame",
+                          "ssd",
+                          NULL);
+  style_info->styles[META_STYLE_ELEMENT_TITLEBAR] =
+    create_style_context (GTK_TYPE_HEADER_BAR,
+                          style_info->styles[META_STYLE_ELEMENT_FRAME],
+                          provider,
+                          "headerbar",
+                          GTK_STYLE_CLASS_TITLEBAR,
+                          GTK_STYLE_CLASS_HORIZONTAL,
+                          "default-decoration",
+                          "header-bar",
+                          NULL);
+  style_info->styles[META_STYLE_ELEMENT_TITLE] =
+    create_style_context (GTK_TYPE_LABEL,
+                          style_info->styles[META_STYLE_ELEMENT_TITLEBAR],
+                          provider,
+                          "label",
+                          GTK_STYLE_CLASS_TITLE,
+                          NULL);
+  style_info->styles[META_STYLE_ELEMENT_BUTTON] =
+    create_style_context (GTK_TYPE_BUTTON,
+                          style_info->styles[META_STYLE_ELEMENT_TITLEBAR],
+                          provider,
+                          "button",
+                          "titlebutton",
+                          NULL);
+  style_info->styles[META_STYLE_ELEMENT_IMAGE] =
+    create_style_context (GTK_TYPE_IMAGE,
+                          style_info->styles[META_STYLE_ELEMENT_BUTTON],
+                          provider,
+                          "image",
+                          NULL);
+
+  return style_info;
+}
+
+#else
+
 static GtkStyleContext *
 create_style_context (GType            widget_type,
                       GtkStyleContext *parent_style,
@@ -1051,6 +1259,8 @@ meta_theme_create_style_info (GdkScreen   *screen,
 
   return style_info;
 }
+
+#endif
 
 MetaStyleInfo *
 meta_style_info_ref (MetaStyleInfo *style_info)
@@ -1154,9 +1364,10 @@ meta_style_info_create_font_desc (MetaStyleInfo *style_info)
 {
   PangoFontDescription *font_desc;
   const PangoFontDescription *override = meta_prefs_get_titlebar_font ();
+  GtkStyleContext *context = style_info->styles[META_STYLE_ELEMENT_TITLE];
 
-  gtk_style_context_get (style_info->styles[META_STYLE_ELEMENT_TITLE],
-                         GTK_STATE_FLAG_NORMAL,
+  gtk_style_context_get (context,
+                         gtk_style_context_get_state (context),
                          "font", &font_desc, NULL);
 
   if (override)
