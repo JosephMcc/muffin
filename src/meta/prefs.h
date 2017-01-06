@@ -2,10 +2,10 @@
 
 /* Muffin preferences */
 
-/* 
+/*
  * Copyright (C) 2001 Havoc Pennington
  * Copyright (C) 2006 Elijah Newren
- * 
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
  * published by the Free Software Foundation; either version 2 of the
@@ -15,7 +15,7 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street - Suite 500, Boston, MA
@@ -78,7 +78,8 @@ typedef enum
   META_PREF_PLACEMENT_MODE,
   META_PREF_MIN_WIN_OPACITY,
   META_PREF_MOUSE_ZOOM_ENABLED,
-  META_PREF_MOUSE_BUTTON_ZOOM_MODS
+  META_PREF_MOUSE_BUTTON_ZOOM_MODS,
+  META_PREF_CROSSFADE_BACKGROUND
 } MetaPreference;
 
 typedef void (* MetaPrefsChangedFunc) (MetaPreference pref,
@@ -173,6 +174,8 @@ gboolean meta_prefs_get_tile_maximize (void);
 gint meta_prefs_get_min_win_opacity (void);
 
 gint meta_prefs_get_ui_scale (void);
+
+gboolean meta_prefs_get_crossfade_background (void);
 
 /* XXX FIXME This should be x-macroed, but isn't yet because it would be
  * difficult (or perhaps impossible) to add the suffixes using the current

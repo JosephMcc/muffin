@@ -39,6 +39,7 @@
 
 #include "cogl-utils.h"
 #include "compositor-private.h"
+#include <meta/prefs.h>
 #include <meta/errors.h>
 #include "meta-background-actor-private.h"
 
@@ -181,12 +182,12 @@ cancel_transitions (MetaBackgroundActor *self)
   clutter_actor_remove_all_transitions (priv->top_actor);
   clutter_actor_set_opacity (priv->top_actor, 255);
   meta_background_set_layer (META_BACKGROUND (priv->bottom_actor), priv->background->texture);
-  
+
   priv->transition_running = FALSE;
 }
 
 static void
-on_trasition_complete (ClutterActor *actor,
+on_transition_complete (ClutterActor *actor,
                        gpointer      user_data)
 {
   MetaBackgroundActor *self = (MetaBackgroundActor *)user_data;
@@ -215,22 +216,30 @@ set_texture_on_actor (MetaBackgroundActor *self)
   if (priv->transition_running)
     cancel_transitions (self);
 
-  clutter_actor_set_opacity (CLUTTER_ACTOR (priv->top_actor), 0);
-  meta_background_set_layer (META_BACKGROUND (priv->top_actor), priv->background->texture);
+  if (!meta_prefs_get_crossfade_background ())
+    {
+      clutter_actor_set_opacity (CLUTTER_ACTOR (priv->top_actor), 0);
+      meta_background_set_layer (META_BACKGROUND (priv->top_actor), priv->background->texture);
 
-  priv->transition_running = TRUE;
+      priv->transition_running = TRUE;
 
-  clutter_actor_save_easing_state (priv->top_actor);
-  clutter_actor_set_easing_duration (priv->top_actor, FADE_DURATION);
-  clutter_actor_set_opacity (priv->top_actor, 255);
-  clutter_actor_restore_easing_state (priv->top_actor);
+      clutter_actor_save_easing_state (priv->top_actor);
+      clutter_actor_set_easing_duration (priv->top_actor, FADE_DURATION);
+      clutter_actor_set_opacity (priv->top_actor, 255);
+      clutter_actor_restore_easing_state (priv->top_actor);
 
-  g_signal_connect (priv->top_actor,
-                    "transitions-completed",
-                    G_CALLBACK (on_trasition_complete),
-                    self);
+      g_signal_connect (priv->top_actor,
+                        "transitions-completed",
+                        G_CALLBACK (on_transition_complete),
+                        self);
 
-  clutter_actor_queue_redraw (CLUTTER_ACTOR (self));
+      clutter_actor_queue_redraw (CLUTTER_ACTOR (self));
+    }
+  else
+    {
+      meta_background_set_layer (META_BACKGROUND (priv->top_actor), priv->background->texture);
+      on_transition_complete (priv->top_actor, self);
+    }
 }
 
 static void

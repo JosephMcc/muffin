@@ -2,7 +2,7 @@
 
 /* Muffin preferences */
 
-/* 
+/*
  * Copyright (C) 2001 Havoc Pennington, Copyright (C) 2002 Red Hat Inc.
  * Copyright (C) 2006 Elijah Newren
  * Copyright (C) 2008 Thomas Thurman
@@ -17,7 +17,7 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street - Suite 500, Boston, MA
@@ -113,6 +113,7 @@ static gboolean edge_tiling = FALSE;
 static gboolean edge_resistance_window = TRUE;
 static gboolean force_fullscreen = TRUE;
 static unsigned int snap_modifier[2];
+static gboolean crossfade_background;
 
 static MetaButtonLayout button_layout;
 
@@ -413,6 +414,13 @@ static MetaBoolPreference preferences_bool[] =
       },
       &tile_maximize,
     },
+    {
+      { "crossfade-background",
+        SCHEMA_MUFFIN,
+        META_PREF_CROSSFADE_BACKGROUND,
+      },
+      &crossfade_background,
+    },
     { { NULL, 0, 0 }, NULL },
   };
 
@@ -616,7 +624,7 @@ handle_preference_init_int (void)
 {
   MetaIntPreference *cursor = preferences_int;
 
-  
+
   while (cursor->base.key != NULL)
     {
       if (cursor->target)
@@ -672,7 +680,7 @@ handle_preference_update_bool (GSettings *settings,
    * store the current value away.
    */
   old_value = *((gboolean *) cursor->target);
-  
+
   /* Now look it up... */
   *((gboolean *) cursor->target) =
     g_settings_get_boolean (SETTINGS (cursor->base.schema), key);
@@ -798,7 +806,7 @@ meta_prefs_remove_listener (MetaPrefsChangedFunc func,
 
           return;
         }
-      
+
       tmp = tmp->next;
     }
 
@@ -813,9 +821,9 @@ emit_changed (MetaPreference pref)
 
   meta_topic (META_DEBUG_PREFS, "Notifying listeners that pref %s changed\n",
               meta_preference_to_string (pref));
-  
+
   copy = g_list_copy (listeners);
-  
+
   tmp = copy;
 
   while (tmp != NULL)
@@ -837,24 +845,24 @@ changed_idle_handler (gpointer data)
   GList *copy;
 
   changed_idle = 0;
-  
+
   copy = g_list_copy (changes); /* reentrancy paranoia */
 
   g_list_free (changes);
   changes = NULL;
-  
+
   tmp = copy;
   while (tmp != NULL)
     {
       MetaPreference pref = GPOINTER_TO_INT (tmp->data);
 
       emit_changed (pref);
-      
+
       tmp = tmp->next;
     }
 
   g_list_free (copy);
-  
+
   return FALSE;
 }
 
@@ -862,7 +870,7 @@ static void
 queue_changed (MetaPreference pref)
 {
   meta_topic (META_DEBUG_PREFS, "Queueing change of pref %s\n",
-              meta_preference_to_string (pref));  
+              meta_preference_to_string (pref));
 
   if (g_list_find (changes, GINT_TO_POINTER (pref)) == NULL)
     changes = g_list_prepend (changes, GINT_TO_POINTER (pref));
@@ -1095,7 +1103,7 @@ settings_changed (GSettings *settings,
   MetaEnumPreference *cursor;
   gboolean found_enum;
   gchar *schema;
-  
+
   g_object_get(settings, "schema", &schema, NULL);
 
   /* String array, handled separately */
@@ -1105,7 +1113,7 @@ settings_changed (GSettings *settings,
         queue_changed (META_PREF_WORKSPACE_NAMES);
       return;
     }
-  
+
   if (strcmp (key, KEY_MIN_WINDOW_OPACITY) == 0)
     {
       update_min_win_opacity ();
@@ -1174,7 +1182,7 @@ static void
 maybe_give_disable_workarounds_warning (void)
 {
   static gboolean first_disable = TRUE;
-    
+
   if (first_disable && disable_workarounds)
     {
       first_disable = FALSE;
@@ -1331,7 +1339,7 @@ mouse_button_mods_handler (GVariant *value,
     {
       meta_topic (META_DEBUG_KEYBINDINGS,
                   "Failed to parse new GSettings value\n");
-          
+
       meta_warning (_("\"%s\" found in configuration database is "
                       "not a valid value for mouse button modifier\n"),
                     string_value);
@@ -1429,7 +1437,7 @@ snap_modifier_handler (GVariant *value,
 static gboolean
 button_layout_equal (const MetaButtonLayout *a,
                      const MetaButtonLayout *b)
-{  
+{
   int i;
 
   i = 0;
@@ -1470,7 +1478,7 @@ button_function_from_string (const char *str)
     return META_BUTTON_FUNCTION_ABOVE;
   else if (strcmp (str, "stick") == 0)
     return META_BUTTON_FUNCTION_STICK;
-  else 
+  else
     /* don't know; give up */
     return META_BUTTON_FUNCTION_LAST;
 }
@@ -1592,7 +1600,7 @@ button_layout_handler (GVariant *value,
           new_layout.right_buttons_has_spacer[i] = FALSE;
           ++i;
         }
-      
+
       buttons = g_strsplit (sides[1], ",", -1);
       i = 0;
       b = 0;
@@ -1628,7 +1636,7 @@ button_layout_handler (GVariant *value,
                               buttons[b]);
                 }
             }
-          
+
           ++b;
         }
 
@@ -1639,13 +1647,13 @@ button_layout_handler (GVariant *value,
   new_layout.right_buttons_has_spacer[i] = FALSE;
 
   g_strfreev (sides);
-  
+
   /* Invert the button layout for RTL languages */
   if (meta_ui_get_direction() == META_UI_DIRECTION_RTL)
   {
     MetaButtonLayout rtl_layout;
     int j;
-    
+
     for (i = 0; new_layout.left_buttons[i] != META_BUTTON_FUNCTION_LAST; i++);
     for (j = 0; j < i; j++)
       {
@@ -1657,7 +1665,7 @@ button_layout_handler (GVariant *value,
       }
     rtl_layout.right_buttons[j] = META_BUTTON_FUNCTION_LAST;
     rtl_layout.right_buttons_has_spacer[j] = FALSE;
-      
+
     for (i = 0; new_layout.right_buttons[i] != META_BUTTON_FUNCTION_LAST; i++);
     for (j = 0; j < i; j++)
       {
@@ -1719,7 +1727,7 @@ gboolean
 meta_prefs_get_application_based (void)
 {
   return FALSE; /* For now, we never want this to do anything */
-  
+
   return application_based;
 }
 
@@ -1756,7 +1764,7 @@ meta_preference_to_string (MetaPreference pref)
 
     case META_PREF_RAISE_ON_CLICK:
       return "RAISE_ON_CLICK";
-      
+
     case META_PREF_THEME:
       return "THEME";
 
@@ -1789,7 +1797,7 @@ meta_preference_to_string (MetaPreference pref)
 
     case META_PREF_AUTO_RAISE:
       return "AUTO_RAISE";
-      
+
     case META_PREF_AUTO_RAISE_DELAY:
       return "AUTO_RAISE_DELAY";
 
@@ -1867,6 +1875,9 @@ meta_preference_to_string (MetaPreference pref)
 
     case META_PREF_MIN_WIN_OPACITY:
       return "MIN_WIN_OPACITY";
+
+    case  META_PREF_CROSSFADE_BACKGROUND:
+      return "CROSSFADE_BACKGROUND";
     }
 
   return "(unknown)";
@@ -1932,7 +1943,7 @@ update_binding (MetaKeyPref *binding,
   g_slist_foreach (binding->bindings, (GFunc) g_free, NULL);
   g_slist_free (binding->bindings);
   binding->bindings = NULL;
-  
+
   for (i = 0; strokes && strokes[i]; i++)
     {
       keysym = 0;
@@ -2068,7 +2079,7 @@ meta_prefs_change_workspace_name (int         num,
 {
   GVariantBuilder builder;
   int n_workspace_names, i;
-  
+
   g_return_if_fail (num >= 0);
 
   meta_topic (META_DEBUG_PREFS,
@@ -2256,7 +2267,7 @@ meta_prefs_remove_custom_keybinding (const char *name)
 
 /**
  * meta_prefs_get_keybindings:
- * 
+ *
  * Returns: (element-type MetaKeyPref) (transfer container):
  */
 GList *
@@ -2453,4 +2464,10 @@ gint
 meta_prefs_get_ui_scale (void)
 {
   return ui_scale;
+}
+
+gboolean
+meta_prefs_get_crossfade_background (void)
+{
+  return crossfade_background;
 }

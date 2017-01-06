@@ -157,6 +157,12 @@
       new windows in the center of the desktop.</_description>
     </key>
 
+    <key name="crossfade-background" type="b">
+      <default>true</default>
+      <summary>Enable the background crossfade effect</summary>
+      <description>Determine whether the background crossfade effect is enabled.</description>
+    </key>
+
     <child name="keybindings" schema="org.cinnamon.muffin.keybindings"/>
   </schema>
   <schema id="org.cinnamon.muffin.keybindings" path="/org/cinnamon/muffin/keybindings/">
