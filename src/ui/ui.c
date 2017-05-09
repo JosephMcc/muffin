@@ -336,6 +336,17 @@ meta_ui_get_corner_radiuses (MetaUI *ui,
                                    bottom_left, bottom_right);
 }
 
+LOCAL_SYMBOL void
+set_background_none (Display *xdisplay,
+                     Window   xwindow)
+{
+  XSetWindowAttributes attrs;
+
+  attrs.background_pixmap = None;
+  XChangeWindowAttributes (xdisplay, xwindow,
+                           CWBackPixmap, &attrs);
+}
+
 LOCAL_SYMBOL Window
 meta_ui_create_frame_window (MetaUI *ui,
                              Display *xdisplay,
@@ -402,7 +413,8 @@ meta_ui_create_frame_window (MetaUI *ui,
 		    &attrs, attributes_mask);
 
   gdk_window_resize (window, width, height);
-  
+  set_background_none (xdisplay, GDK_WINDOW_XID (window));
+
   meta_frames_manage_window (ui->frames, GDK_WINDOW_XID (window), window);
 
   return GDK_WINDOW_XID (window);
@@ -455,16 +467,6 @@ meta_ui_unmap_frame (MetaUI *ui,
 }
 
 LOCAL_SYMBOL void
-meta_ui_unflicker_frame_bg (MetaUI *ui,
-                            Window  xwindow,
-                            int     target_width,
-                            int     target_height)
-{
-  meta_frames_unflicker_bg (ui->frames, xwindow,
-                            target_width, target_height);
-}
-
-LOCAL_SYMBOL void
 meta_ui_update_frame_style (MetaUI  *ui,
                             Window   xwindow)
 {
@@ -476,13 +478,6 @@ meta_ui_repaint_frame (MetaUI *ui,
                        Window xwindow)
 {
   meta_frames_repaint_frame (ui->frames, xwindow);
-}
-
-LOCAL_SYMBOL void
-meta_ui_reset_frame_bg (MetaUI *ui,
-                        Window xwindow)
-{
-  meta_frames_reset_bg (ui->frames, xwindow);
 }
 
 LOCAL_SYMBOL cairo_region_t *
@@ -722,29 +717,30 @@ meta_ui_theme_get_frame_borders (MetaUI *ui,
                                  MetaFrameBorders  *borders)
 {
   int text_height;
-  GtkStyleContext *style = NULL;
+  MetaStyleInfo *style_info = NULL;
   PangoContext *context;
   const PangoFontDescription *font_desc;
   PangoFontDescription *free_font_desc = NULL;
 
   if (meta_ui_have_a_theme ())
     {
+      GdkDisplay *display = gdk_x11_lookup_xdisplay (ui->xdisplay);
+      GdkScreen *screen = gdk_display_get_screen (display, XScreenNumberOfScreen (ui->xscreen));
+
+      style_info = meta_theme_create_style_info (screen, NULL);
       context = gtk_widget_get_pango_context (GTK_WIDGET (ui->frames));
       font_desc = meta_prefs_get_titlebar_font ();
 
       if (!font_desc)
         {
-          style = gtk_style_context_new ();
-          gtk_style_context_get (style, GTK_STATE_FLAG_NORMAL,
-                                 GTK_STYLE_PROPERTY_FONT, &free_font_desc,
-                                 NULL);
+          free_font_desc = meta_style_info_create_font_desc (style_info);
           font_desc = (const PangoFontDescription *) free_font_desc;
         }
 
       text_height = meta_pango_font_desc_get_text_height (font_desc, context);
 
-      meta_theme_get_frame_borders (meta_theme_get_current (),
-                                    type, text_height, flags,
+      meta_theme_get_frame_borders (meta_theme_get_default (),
+                                    style_info, type, text_height, flags,
                                     borders);
 
       if (free_font_desc)
@@ -755,22 +751,14 @@ meta_ui_theme_get_frame_borders (MetaUI *ui,
       meta_frame_borders_clear (borders);
     }
 
-  if (style != NULL)
-    g_object_unref (style);
-}
-
-LOCAL_SYMBOL void
-meta_ui_set_current_theme (const char *name,
-                           gboolean    force_reload)
-{
-  meta_theme_set_current (name, force_reload);
-  meta_invalidate_default_icons ();
+  if (style_info != NULL)
+    meta_style_info_unref (style_info);
 }
 
 LOCAL_SYMBOL gboolean
 meta_ui_have_a_theme (void)
 {
-  return meta_theme_get_current () != NULL;
+  return meta_theme_get_default () != NULL;
 }
 
 static void

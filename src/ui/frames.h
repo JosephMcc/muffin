@@ -75,9 +75,9 @@ struct _MetaUIFrame
 {
   Window xwindow;
   GdkWindow *window;
-  GtkStyleContext *style;
-  MetaFrameStyle *cache_style;
-  PangoLayout *layout;
+  MetaStyleInfo *style_info;
+  MetaFrameLayout *cache_layout;
+  PangoLayout *text_layout;
   int text_height;
   char *title; /* NULL once we have a layout */
   guint shape_applied : 1;
@@ -96,7 +96,7 @@ struct _MetaFrames
 
   MetaUIFrame *last_motion_frame;
 
-  GtkStyleContext *normal_style;
+  MetaStyleInfo *normal_style;
   GHashTable *style_variants;
 
   int invalidate_cache_timeout_id;
@@ -132,13 +132,6 @@ void meta_frames_repaint_frame (MetaFrames *frames,
 void meta_frames_get_borders (MetaFrames *frames,
                               Window xwindow,
                               MetaFrameBorders *borders);
-
-void meta_frames_reset_bg     (MetaFrames *frames,
-                               Window      xwindow);
-void meta_frames_unflicker_bg (MetaFrames *frames,
-                               Window      xwindow,
-                               int         target_width,
-                               int         target_height);
 
 cairo_region_t *meta_frames_get_frame_bounds (MetaFrames *frames,
                                               Window      xwindow,

@@ -88,13 +88,6 @@ void meta_ui_map_frame   (MetaUI *ui,
 void meta_ui_unmap_frame (MetaUI *ui,
                           Window  xwindow);
 
-void meta_ui_unflicker_frame_bg (MetaUI *ui,
-                                 Window  xwindow,
-                                 int     target_width,
-                                 int     target_height);
-void meta_ui_reset_frame_bg     (MetaUI *ui,
-                                 Window  xwindow);
-
 cairo_region_t *meta_ui_get_frame_bounds (MetaUI  *ui,
                                           Window   xwindow,
                                           int      window_width,
@@ -152,8 +145,7 @@ gboolean  meta_ui_window_should_not_cause_focus (Display *xdisplay,
 char*     meta_text_property_to_utf8 (Display             *xdisplay,
                                       const XTextProperty *prop);
 
-void     meta_ui_set_current_theme (const char *name,
-                                    gboolean    force_reload);
+void     meta_ui_set_current_theme (const char *name);
 gboolean meta_ui_have_a_theme      (void);
 
 /* Not a real key symbol but means "key above the tab key"; this is
