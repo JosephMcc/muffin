@@ -765,53 +765,6 @@ meta_frames_get_borders (MetaFrames *frames,
   meta_ui_frame_get_borders (frames, frame, borders);
 }
 
-static void
-meta_ui_frame_get_corner_radiuses (MetaFrames  *frames,
-                                   MetaUIFrame *frame,
-                                   float       *top_left,
-                                   float       *top_right,
-                                   float       *bottom_left,
-                                   float       *bottom_right)
-{
-  MetaFrameGeometry fgeom;
-
-  meta_frames_calc_geometry (frames, frame, &fgeom);
-
-  /* For compatibility with the code in get_visible_rect(), there's
-   * a mysterious sqrt() added to the corner radiuses:
-   *
-   *   const float radius = sqrt(corner) + corner;
-   *
-   * It's unclear why the radius is calculated like this, but we
-   * need to be consistent with it.
-   */
-
-  if (top_left)
-    *top_left = fgeom.top_left_corner_rounded_radius + sqrt(fgeom.top_left_corner_rounded_radius);
-  if (top_right)
-    *top_right = fgeom.top_right_corner_rounded_radius + sqrt(fgeom.top_right_corner_rounded_radius);
-  if (bottom_left)
-    *bottom_left = fgeom.bottom_left_corner_rounded_radius + sqrt(fgeom.bottom_left_corner_rounded_radius);
-  if (bottom_right)
-    *bottom_right = fgeom.bottom_right_corner_rounded_radius + sqrt(fgeom.bottom_right_corner_rounded_radius);
-}
-
-void
-meta_frames_get_corner_radiuses (MetaFrames *frames,
-                                 Window      xwindow,
-                                 float      *top_left,
-                                 float      *top_right,
-                                 float      *bottom_left,
-                                 float      *bottom_right)
-{
-  MetaUIFrame *frame;
-
-  frame = meta_frames_lookup_window (frames, xwindow);
-
-  meta_ui_frame_get_corner_radiuses (frames, frame, top_left, top_right,
-                                     bottom_left, bottom_right);
-}
-
 /* The client rectangle surrounds client window; it subtracts both
  * the visible and invisible borders from the frame window's size.
  */
@@ -861,7 +814,7 @@ get_visible_region (MetaFrames        *frames,
   if (fgeom->top_left_corner_rounded_radius != 0)
     {
       const int corner = fgeom->top_left_corner_rounded_radius;
-      const float radius = sqrt(corner) + corner;
+      const float radius = corner;
       int i;
 
       for (i=0; i<corner; i++)
@@ -879,7 +832,7 @@ get_visible_region (MetaFrames        *frames,
   if (fgeom->top_right_corner_rounded_radius != 0)
     {
       const int corner = fgeom->top_right_corner_rounded_radius;
-      const float radius = sqrt(corner) + corner;
+      const float radius = corner;
       int i;
 
       for (i=0; i<corner; i++)
@@ -897,7 +850,7 @@ get_visible_region (MetaFrames        *frames,
   if (fgeom->bottom_left_corner_rounded_radius != 0)
     {
       const int corner = fgeom->bottom_left_corner_rounded_radius;
-      const float radius = sqrt(corner) + corner;
+      const float radius = corner;
       int i;
 
       for (i=0; i<corner; i++)
@@ -915,7 +868,7 @@ get_visible_region (MetaFrames        *frames,
   if (fgeom->bottom_right_corner_rounded_radius != 0)
     {
       const int corner = fgeom->bottom_right_corner_rounded_radius;
-      const float radius = sqrt(corner) + corner;
+      const float radius = corner;
       int i;
 
       for (i=0; i<corner; i++)
@@ -2167,6 +2120,55 @@ cached_pixels_draw (CachedPixels   *pixels,
           cairo_region_destroy (region_piece);
         }
     }
+}
+
+/*
+ * Draw the opaque and semi-opaque pixels of this frame into a mask.
+ *
+ * (0,0) in Cairo coordinates is assumed to be the top left corner of the
+ * invisible border.
+ *
+ * The parts of @cr's surface in the clip region are assumed to be
+ * initialized to fully-transparent, and the clip region is assumed to
+ * contain the invisible border and the visible parts of the frame, but
+ * not the client area.
+ *
+ * This function uses @cr to draw pixels of arbitrary color (it will
+ * typically be drawing in a %CAIRO_FORMAT_A8 surface, so the color is
+ * discarded anyway) with appropriate alpha values to reproduce this
+ * frame's alpha channel, as a mask to be applied to an opaque pixmap.
+ *
+ * @frame: This frame
+ * @xwindow: The X window for the frame, which has the client window as a child
+ * @width: The width of the framed window including any invisible borders
+ * @height: The height of the framed window including any invisible borders
+ * @cr: Used to draw the resulting mask
+ */
+void
+meta_frames_get_mask (MetaFrames          *frames,
+                      Window               xwindow,
+                      guint                width,
+                      guint                height,
+                      cairo_t             *cr)
+{
+  MetaUIFrame *frame = meta_frames_lookup_window (frames, xwindow);
+  MetaFrameBorders borders;
+  MetaFrameFlags flags;
+
+  if (frame == NULL)
+    meta_bug ("No such frame 0x%lx\n", xwindow);
+
+  meta_core_get (GDK_DISPLAY_XDISPLAY (gdk_display_get_default ()),
+                 xwindow,
+                 META_CORE_GET_FRAME_FLAGS, &flags,
+                 META_CORE_GET_END);
+
+  meta_style_info_set_flags (frame->style_info, flags);
+  meta_ui_frame_get_borders (frames, frame, &borders);
+  gtk_render_background (frame->style_info->styles[META_STYLE_ELEMENT_FRAME], cr,
+                         borders.invisible.left, borders.invisible.top,
+                         width - borders.invisible.left - borders.invisible.right,
+                         height - borders.invisible.top - borders.invisible.bottom);
 }
 
 static gboolean
