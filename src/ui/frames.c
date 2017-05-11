@@ -2154,6 +2154,7 @@ meta_frames_get_mask (MetaFrames          *frames,
   MetaUIFrame *frame = meta_frames_lookup_window (frames, xwindow);
   MetaFrameBorders borders;
   MetaFrameFlags flags;
+  int scale = meta_theme_get_window_scaling_factor ();
 
   if (frame == NULL)
     meta_bug ("No such frame 0x%lx\n", xwindow);
@@ -2165,10 +2166,14 @@ meta_frames_get_mask (MetaFrames          *frames,
 
   meta_style_info_set_flags (frame->style_info, flags);
   meta_ui_frame_get_borders (frames, frame, &borders);
+
+  /* See comment in meta_frame_layout_draw_with_style() for details on HiDPI handling */
+  cairo_scale (cr, scale, scale);
   gtk_render_background (frame->style_info->styles[META_STYLE_ELEMENT_FRAME], cr,
-                         borders.invisible.left, borders.invisible.top,
-                         width - borders.invisible.left - borders.invisible.right,
-                         height - borders.invisible.top - borders.invisible.bottom);
+                         borders.invisible.left / scale,
+                         borders.invisible.top / scale,
+                         (width - borders.invisible.left - borders.invisible.right) / scale,
+                         (height - borders.invisible.top - borders.invisible.bottom) / scale);
 }
 
 static gboolean
