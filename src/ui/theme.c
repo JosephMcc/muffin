@@ -1209,6 +1209,7 @@ create_style_context (GType            widget_type,
   va_list ap;
 
   style = gtk_style_context_new ();
+  gtk_style_context_set_scale (style, meta_theme_get_window_scaling_factor ());
   gtk_style_context_set_parent (style, parent_style);
 
   if (parent_style)
