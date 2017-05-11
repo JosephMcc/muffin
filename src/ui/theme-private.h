@@ -179,6 +179,21 @@ typedef enum
   META_MENU_ICON_TYPE_LAST
 } MetaMenuIconType;
 
+#if GTK_CHECK_VERSION (3, 20, 0)
+
+typedef enum
+{
+  META_STYLE_ELEMENT_WINDOW,
+  META_STYLE_ELEMENT_FRAME,
+  META_STYLE_ELEMENT_TITLEBAR,
+  META_STYLE_ELEMENT_TITLE,
+  META_STYLE_ELEMENT_BUTTON,
+  META_STYLE_ELEMENT_IMAGE,
+  META_STYLE_ELEMENT_LAST
+} MetaStyleElement;
+
+#else
+
 typedef enum
 {
   META_STYLE_ELEMENT_FRAME,
@@ -188,6 +203,8 @@ typedef enum
   META_STYLE_ELEMENT_IMAGE,
   META_STYLE_ELEMENT_LAST
 } MetaStyleElement;
+
+#endif
 
 struct _MetaStyleInfo
 {

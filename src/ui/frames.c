@@ -2174,6 +2174,12 @@ meta_frames_get_mask (MetaFrames          *frames,
                          borders.invisible.top / scale,
                          (width - borders.invisible.left - borders.invisible.right) / scale,
                          (height - borders.invisible.top - borders.invisible.bottom) / scale);
+#if GTK_CHECK_VERSION (3, 20, 0)
+  gtk_render_background (frame->style_info->styles[META_STYLE_ELEMENT_TITLEBAR], cr,
+                         borders.invisible.left / scale,
+                         borders.invisible.top / scale,
+                         frame_rect.width / scale, borders.total.top / scale);
+#endif
 }
 
 static gboolean
